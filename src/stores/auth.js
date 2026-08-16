@@ -97,6 +97,9 @@ export const useAuthStore = defineStore("auth", {
     user: null,
     token: null,
     loading: false,
+    // Rate limiting client-side: tras 5 intentos fallidos se bloquea 30 s.
+    failedAttempts: 0,
+    lockedUntil: 0,
   }),
 
   getters: {
@@ -128,12 +131,25 @@ export const useAuthStore = defineStore("auth", {
     async login(username, password, remember = true) {
       this.loading = true;
       try {
+        const waitMs = this.lockedUntil - Date.now();
+        if (waitMs > 0) {
+          throw new Error(`Demasiados intentos fallidos. Esperá ${Math.ceil(waitMs / 1000)} segundos e intentá de nuevo.`);
+        }
+        if (!config.admin.configured) {
+          throw new Error("El panel aún no está configurado. Definí la variable VITE_ADMIN_PASS para habilitar el acceso.");
+        }
         await new Promise((resolve) => setTimeout(resolve, 650));
         const okUser = String(username || "").trim().toLowerCase();
         const okPass = String(password || "");
         if (okUser !== config.admin.username || okPass !== config.admin.password) {
+          this.failedAttempts += 1;
+          if (this.failedAttempts >= 5) {
+            this.lockedUntil = Date.now() + 30000;
+            this.failedAttempts = 0;
+          }
           throw new Error("Credenciales incorrectas. Verificá usuario y contraseña.");
         }
+        this.failedAttempts = 0;
         this.user = { ...DEMO_USER };
         this.token = await issueToken(this.user, config.businessRules.authTtlMs);
         const payload = { user: this.user, token: this.token };

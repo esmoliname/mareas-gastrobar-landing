@@ -1,7 +1,7 @@
 <script setup>
 import { defineAsyncComponent, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ArrowLeft, LogOut, ShieldCheck, UtensilsCrossed, QrCode, Palette } from "lucide-vue-next";
+import { ArrowLeft, LogOut, Palmtree, ShieldCheck, UtensilsCrossed, QrCode, Palette } from "lucide-vue-next";
 import AdminCatalog from "../components/admin/AdminCatalog.vue";
 import CustomizePanel from "../components/admin/CustomizePanel.vue";
 import { useAuthStore } from "../stores/auth.js";
@@ -40,7 +40,7 @@ function logout() {
           <p class="admin__subtitle">Gestión del catálogo, menú digital QR y personalización de Mareas.</p>
         </div>
         <div class="admin__side">
-          <div class="admin__brand" aria-hidden="true">🌴</div>
+          <div class="admin__brand" aria-hidden="true"><Palmtree :size="26" /></div>
           <div class="admin__user">
             <ShieldCheck :size="16" class="admin__user-icon" aria-hidden="true" />
             <div>
@@ -133,8 +133,9 @@ function logout() {
 }
 
 .admin__brand {
-  font-size: 2.6rem;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  color: var(--gold-light);
 }
 
 .admin__user {

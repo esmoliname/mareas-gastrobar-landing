@@ -1,13 +1,18 @@
 // Catálogo central de fotos de Mareas.
 // Única fuente de verdad para imágenes del sitio: hero, secciones,
-// fallbacks por categoría y red social. Reemplazar las URLs de Unsplash
-// por fotografía real del local cuando esté disponible.
+// fallbacks por categoría y red social.
+//
+// Las fotos /photos/*.jpg fueron descargadas de la página oficial de
+// Facebook de Mareas (facebook.com/Mareascr) el 2026-08-16 y optimizadas
+// para web (los enlaces originales de fbcdn expiran, por eso viven en el repo).
 
 const U = (id, w = 1000) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 export const photos = {
-  hero: U("photo-1514933651103-005eec06c04b", 1920),
+  hero: "/photos/hero.jpg",
+  // og:image requiere URL absoluta estable; se mantiene en Unsplash hasta
+  // que restaurantemareascr.com esté en línea con fotos del local.
   og: U("photo-1514933651103-005eec06c04b", 1200),
 
   highlights: {
@@ -34,11 +39,11 @@ export const photos = {
   },
 
   social: [
-    { url: U("photo-1559847844-5315695dadae", 600), alt: "Mariscos del día en Mareas", label: "Mariscos del día" },
-    { url: U("photo-1552332386-f8dd00dc2f85", 600), alt: "Antojos de la casa", label: "Antojos" },
-    { url: U("photo-1544145945-f90425340c7e", 600), alt: "Cóctel tropical en Mareas", label: "Cóctel de la casa" },
-    { url: U("photo-1514933651103-005eec06c04b", 600), alt: "Ambiente nocturno del bar", label: "Noches de Mareas" },
-    { url: U("photo-1513104890138-7c749659a591", 600), alt: "Pizza recién salida del horno", label: "Pizza al horno" },
-    { url: U("photo-1510812431401-41d2bd2722f3", 600), alt: "Brindis en Mareas", label: "Cheers" },
+    { url: "/photos/g1.jpg", alt: "Fotos reales de Mareas — noche en el gastrobar", label: "Noche en Mareas" },
+    { url: "/photos/g2.jpg", alt: "Fotos reales de Mareas Gastrobar", label: "Mareas Gastrobar" },
+    { url: "/photos/g3.jpg", alt: "Fotos reales de Mareas — la casa", label: "La casa de Mareas" },
+    { url: "/photos/g4.jpg", alt: "Fotos reales de Mareas — Ciudad Quesada", label: "Ciudad Quesada" },
+    { url: "/photos/g5.jpg", alt: "Fotos reales de Mareas — fines de semana", label: "Fines de semana" },
+    { url: "/photos/g6.jpg", alt: "Fotos reales de Mareas — noche de gastrobar", label: "Noches de Mareas" },
   ],
 };

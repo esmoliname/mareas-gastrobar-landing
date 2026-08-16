@@ -2,6 +2,7 @@
 import { site, whatsappUrl } from "../data/site.js";
 import WhatsappIcon from "./WhatsappIcon.vue";
 import StarRating from "./StarRating.vue";
+import { Clock, MapPin, Martini } from "lucide-vue-next";
 
 defineProps({
   status: { type: Object, required: true },
@@ -13,7 +14,7 @@ defineProps({
     <div class="hero__bg" aria-hidden="true">
       <img
         class="hero__img"
-        src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1920&q=80"
+        src="/photos/hero.jpg"
         alt=""
         fetchpriority="high"
         decoding="async"
@@ -64,15 +65,15 @@ defineProps({
 
       <dl class="hero__meta">
         <div>
-          <dt class="u-muted">📍 Ubicación</dt>
+          <dt class="u-muted"><span class="hero__meta-icon" aria-hidden="true"><MapPin :size="13" /></span> Ubicación</dt>
           <dd>Barrio Lourdes, Ciudad Quesada</dd>
         </div>
         <div>
-          <dt class="u-muted">⏰ Hoy</dt>
+          <dt class="u-muted"><span class="hero__meta-icon" aria-hidden="true"><Clock :size="13" /></span> Hoy</dt>
           <dd>{{ status.open ? "Abierto" : "Cerrado" }} · {{ status.note }}</dd>
         </div>
         <div>
-          <dt class="u-muted">🍸 Vibra</dt>
+          <dt class="u-muted"><span class="hero__meta-icon" aria-hidden="true"><Martini :size="13" /></span> Vibra</dt>
           <dd>Ambiente de playa</dd>
         </div>
       </dl>
@@ -267,9 +268,17 @@ defineProps({
 }
 
 .hero__meta dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.hero__meta-icon {
+  display: inline-flex;
+  color: var(--gold-light);
 }
 
 .hero__meta dd {

@@ -40,6 +40,10 @@ export const config = {
 
   admin: {
     username: env.VITE_ADMIN_USER || "admin",
-    password: env.VITE_ADMIN_PASS || "mareas2024",
+    // En producción el panel queda bloqueado (contraseña vacía) hasta que se
+    // defina VITE_ADMIN_PASS en el entorno de deploy. En desarrollo se usa la
+    // demo "mareas2024" para no romper el flujo local.
+    password: env.VITE_ADMIN_PASS || (import.meta.env.DEV ? "mareas2024" : ""),
+    configured: Boolean(env.VITE_ADMIN_PASS || import.meta.env.DEV),
   },
 };

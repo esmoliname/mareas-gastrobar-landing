@@ -30,7 +30,7 @@ export const settings = reactive({
   theme: saved?.theme && themes[saved.theme] ? saved.theme : "tropical",
   banner: {
     enabled: saved?.banner?.enabled ?? false,
-    text: saved?.banner?.text ?? "¡Noches de maridaje todos los viernes! 🍹",
+    text: saved?.banner?.text ?? "¡Noches de maridaje todos los viernes!",
   },
 });
 

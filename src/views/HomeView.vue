@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { Palmtree } from "lucide-vue-next";
 import SiteHeader from "../components/SiteHeader.vue";
 import HeroSection from "../components/HeroSection.vue";
 import MenuSection from "../components/MenuSection.vue";
@@ -28,7 +29,7 @@ onMounted(() => {
 <template>
   <SiteHeader :status="status" />
   <div v-if="showBanner" class="season-banner" role="status">
-    <span class="season-banner__leaf" aria-hidden="true">🌴</span>
+    <span class="season-banner__leaf" aria-hidden="true"><Palmtree :size="16" /></span>
     <span>{{ settings.banner.text }}</span>
   </div>
   <main>
@@ -67,6 +68,7 @@ onMounted(() => {
 }
 
 .season-banner__leaf {
-  font-size: 1rem;
+  display: inline-flex;
+  color: var(--green-bright);
 }
 </style>

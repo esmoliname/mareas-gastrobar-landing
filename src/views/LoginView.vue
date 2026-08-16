@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { AlertCircle, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-vue-next";
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, LogIn, Mail, Palmtree, ShieldCheck } from "lucide-vue-next";
 import { useAuthStore } from "../stores/auth.js";
 import { config } from "../config/index.js";
 
@@ -23,6 +23,8 @@ const errors = reactive({
 
 const showPassword = ref(false);
 const submitted = ref(false);
+
+const demoAvailable = computed(() => config.admin.configured);
 
 const redirectTo = computed(() => {
   const target = route.query.redirect;
@@ -56,6 +58,10 @@ function validate() {
 
 async function submit() {
   submitted.value = true;
+  if (!config.admin.configured) {
+    errors.form = "El panel aún no está configurado. Definí la variable VITE_ADMIN_PASS en el entorno de deploy.";
+    return;
+  }
   if (!validate()) return;
 
   try {
@@ -84,7 +90,7 @@ function fillDemo() {
         ← Volver al sitio
       </RouterLink>
 
-      <div class="login__brand" aria-hidden="true">🌴</div>
+      <div class="login__brand" aria-hidden="true"><Palmtree :size="42" /></div>
       <h1 class="login__title">Panel de Mareas</h1>
       <p class="login__subtitle">
         Accedé al panel de administración del gastrobar. Solo personal autorizado.
@@ -159,13 +165,20 @@ function fillDemo() {
         </button>
       </form>
 
-      <div class="login__demo">
+      <div v-if="demoAvailable" class="login__demo">
         <ShieldCheck :size="15" class="login__demo-icon" aria-hidden="true" />
         <p>
           <strong>Acceso de demostración:</strong>
           usuario <code>{{ config.admin.username }}</code> · contraseña <code>{{ config.admin.password }}</code>
         </p>
         <button class="login__demo-fill" type="button" @click="fillDemo">Usar credenciales de prueba</button>
+      </div>
+      <div v-else class="login__demo login__demo--warn" role="alert">
+        <AlertCircle :size="15" class="login__demo-icon" aria-hidden="true" />
+        <p>
+          <strong>Panel aún no configurado.</strong>
+          Definí la variable <code>VITE_ADMIN_PASS</code> en el entorno de deploy para habilitar el acceso.
+        </p>
       </div>
     </main>
 
@@ -220,8 +233,9 @@ function fillDemo() {
 }
 
 .login__brand {
-  font-size: 2.4rem;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  color: var(--gold-light);
   margin-bottom: 10px;
 }
 
@@ -369,6 +383,11 @@ function fillDemo() {
 
 .login__demo-icon {
   color: var(--gold-light);
+}
+
+.login__demo--warn {
+  background: rgba(232, 122, 93, 0.1);
+  border-color: rgba(232, 122, 93, 0.4);
 }
 
 .login__demo code {

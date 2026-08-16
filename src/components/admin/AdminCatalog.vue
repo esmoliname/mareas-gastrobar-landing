@@ -327,7 +327,7 @@ function onReset() {
 
             <label class="check">
               <input v-model="form.popular" type="checkbox" />
-              <span>Marcar como popular (badge 🔥)</span>
+              <span>Marcar como popular (badge)</span>
             </label>
 
             <label class="check">

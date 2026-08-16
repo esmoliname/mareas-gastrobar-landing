@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   Store,
   Trash2,
+  UtensilsCrossed,
   X,
 } from "lucide-vue-next";
 import { useCartStore, ORDER_TYPES, PAYMENT_METHODS } from "../stores/cart.js";
@@ -39,14 +40,36 @@ const cashChange = computed(() => {
   return paid >= cart.total ? paid - cart.total : -1;
 });
 
+const panelRef = ref(null);
+
 const orderTypeIcon = (id) => {
   if (id === "mesa") return Store;
   if (id === "pickup") return ShoppingBag;
   return Bike;
 };
 
+// Focus trap: Tab/SShift+Tab se mantienen dentro del panel del carrito.
 function onKeydown(e) {
-  if (e.key === "Escape" && cart.drawerOpen) cart.close();
+  if (e.key === "Escape" && cart.drawerOpen) {
+    cart.close();
+    return;
+  }
+  if (e.key !== "Tab" || !cart.drawerOpen) return;
+  const panel = panelRef.value;
+  if (!panel) return;
+  const focusables = panel.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 onMounted(() => document.addEventListener("keydown", onKeydown));
@@ -113,7 +136,7 @@ function openWhatsapp() {
   <Teleport to="body">
     <Transition name="cart">
       <div v-if="cart.drawerOpen" class="cart-overlay" @click.self="cart.close()">
-        <aside class="cart-panel" role="dialog" aria-modal="true" aria-label="Carrito de pedidos">
+        <aside ref="panelRef" class="cart-panel" role="dialog" aria-modal="true" aria-label="Carrito de pedidos">
           <header class="cart-head">
             <div class="cart-head__title">
               <ShoppingBag :size="18" aria-hidden="true" />
@@ -142,13 +165,13 @@ function openWhatsapp() {
               <p v-if="cart.isEmpty" class="cart-empty">
                 <ShoppingBag :size="30" aria-hidden="true" />
                 Tu carrito está vacío.
-                <span>Explorá el menú y agregá algo rico. 🍹</span>
+                <span>Explorá el menú y agregá algo rico.</span>
               </p>
 
               <ul v-else class="cart-list">
                 <li v-for="item in cart.items" :key="item.id" class="cart-item">
                   <img v-if="item.image" :src="item.image" :alt="item.name" class="cart-item__img" loading="lazy" decoding="async" />
-                  <div v-else class="cart-item__img cart-item__img--empty" aria-hidden="true">🍽️</div>
+                  <div v-else class="cart-item__img cart-item__img--empty" aria-hidden="true"><UtensilsCrossed :size="22" /></div>
 
                   <div class="cart-item__main">
                     <div class="cart-item__row">
@@ -411,7 +434,7 @@ function openWhatsapp() {
 .cart-item__img--empty {
   display: grid;
   place-items: center;
-  font-size: 1.6rem;
+  color: var(--muted);
 }
 
 .cart-item__main {

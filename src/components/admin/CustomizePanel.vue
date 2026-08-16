@@ -87,14 +87,14 @@ function resetTheme() {
             v-model="settings.banner.text"
             type="text"
             maxlength="90"
-            placeholder="¡Noches de maridaje todos los viernes! 🍹"
+            placeholder="¡Noches de maridaje todos los viernes!"
             @change="setBanner({ text: settings.banner.text })"
           />
           <small class="field__hint">{{ settings.banner.text.length }}/90 caracteres</small>
         </label>
 
         <div v-if="settings.banner.enabled" class="banner-preview" aria-hidden="true">
-          🌴 {{ settings.banner.text }}
+          {{ settings.banner.text }}
         </div>
 
         <p class="customize__note">

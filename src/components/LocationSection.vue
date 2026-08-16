@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { site, whatsappUrl } from "../data/site.js";
 import WhatsappIcon from "./WhatsappIcon.vue";
+import { MessageCircle, Phone } from "lucide-vue-next";
 
 const props = defineProps({
   status: { type: Object, required: true },
@@ -40,10 +41,12 @@ const todayName = computed(() => {
 
           <div class="location__contact">
             <a :href="`tel:${site.phoneTel}`">
-              📞 <strong>{{ site.phoneDisplay }}</strong> — Llamanos
+              <Phone :size="14" class="location__contact-icon" aria-hidden="true" />
+              <strong>{{ site.phoneDisplay }}</strong> — Llamanos
             </a>
             <a :href="whatsappUrl()" target="_blank" rel="noopener noreferrer">
-              💬 WhatsApp — {{ site.whatsappNumber }}
+              <MessageCircle :size="14" class="location__contact-icon" aria-hidden="true" />
+              WhatsApp — {{ site.whatsappNumber }}
             </a>
           </div>
         </address>
@@ -124,6 +127,17 @@ const todayName = computed(() => {
   font-size: 0.92rem;
   border-top: 1px solid rgba(245, 239, 224, 0.08);
   padding-top: 16px;
+}
+
+.location__contact a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.location__contact-icon {
+  color: var(--gold-light);
+  flex-shrink: 0;
 }
 
 .location__hours-title {

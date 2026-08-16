@@ -64,7 +64,7 @@ function download() {
 
 function exportPdf() {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-  const brand = "🌴 MARÉAS · GASTROBAR TROPICAL";
+  const brand = "MAREAS · GASTROBAR TROPICAL";
   const label = tableNumber.value.trim() ? `Código QR — Mesa ${tableNumber.value}` : "Código QR — Menú digital";
   const sub = "Escaneá para ver el menú y pedir desde la mesa.";
 

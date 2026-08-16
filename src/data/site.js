@@ -11,7 +11,7 @@ export const site = {
   phoneDisplay: config.contact.phoneDisplay,
   phoneTel: config.contact.phoneTel,
   whatsappNumber: config.contact.whatsappNumber,
-  whatsappMessage: "¡Hola Mareas! Quiero reservar una mesa para hoy. 🌴",
+  whatsappMessage: "¡Hola Mareas! Quiero reservar una mesa para hoy.",
   email: config.contact.email,
 
   instagram: "https://www.instagram.com/mareas.cr",

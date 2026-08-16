@@ -53,7 +53,22 @@ const isIOS = computed(() => {
 
 const isAndroid = computed(() => /Android/i.test(navigator.userAgent));
 
-const iosQuickLookReady = computed(() => isIOS.value && Boolean(props.item?.usdz));
+const iosQuickLookReady = computed(() => isIOS.value && Boolean(iosSrc.value));
+
+// Escala 1:1 con ar-scale="fixed": normaliza las unidades de autoría del GLB
+// (definidas por modelo en models3d.js) al tamaño físico real en metros.
+const modelScale = computed(() => {
+  const s = Number(resolved.value?.scale) || 1;
+  return `${s} ${s} ${s}`;
+});
+
+// Quick Look respeta el tamaño real: #allowsContentScaling=0 deshabilita el
+// gesto de reescalado con pellizco en iOS (requerido con ar-scale="fixed").
+const iosSrc = computed(() => {
+  const base = props.item?.usdz || resolved.value?.usdz || "";
+  if (!base) return undefined;
+  return base.includes("#allowsContentScaling=") ? base : `${base}#allowsContentScaling=0`;
+});
 
 const arModes = computed(() => (isIOS.value ? "quick-look" : "webxr scene-viewer quick-look"));
 
@@ -63,8 +78,7 @@ const platformLabel = computed(() => {
   return "Desktop · Vista 360°";
 });
 
-const stageExposure = computed(() => (warmLight.value ? 1.38 : 1.08));
-const stageShadow = computed(() => (warmLight.value ? "1.8" : "1.5"));
+const stageExposure = computed(() => (warmLight.value ? 1.45 : 1.15));
 
 function webglSupported() {
   try {
@@ -180,7 +194,7 @@ async function launchAr() {
     viewer.activateAR();
     return;
   }
-  if (isIOS.value && !props.item?.usdz) {
+  if (isIOS.value && !iosSrc.value) {
     arError.value = "Este platillo aún no tiene archivo USDZ para iOS. Podés explorarlo en 3D acá mismo.";
   } else {
     arError.value = "Tu dispositivo no soporta Realidad Aumentada. Podés explorar el modelo en 3D acá mismo.";
@@ -261,20 +275,22 @@ function toggleFullscreen() {
               v-if="item && viewerReady"
               ref="viewerRef"
               :src="resolved?.glb || item.model"
-              :ios-src="item.usdz || undefined"
+              :ios-src="iosSrc"
               :alt="`Modelo 3D de ${item.name}`"
               ar
               :ar-modes="arModes"
-              ar-scale="auto"
+              ar-scale="fixed"
               ar-placement="floor"
+              :scale="modelScale"
               camera-controls
               touch-action="pan-y"
               interaction-prompt="none"
               :auto-rotate="autoRotate"
               :auto-rotate-delay="0"
               :exposure="stageExposure"
-              :shadow-intensity="stageShadow"
-              shadow-softness="1"
+              shadow-intensity="2"
+              shadow-softness="0.8"
+              tone-mapping="aces"
               environment-image="neutral"
               autoplay
               @load="onLoad"
