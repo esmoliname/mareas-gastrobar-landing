@@ -68,9 +68,9 @@ const cartCount = computed(() => cart.count);
   top: 0;
   z-index: 50;
   height: var(--header-h);
-  background: rgba(11, 18, 16, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(11, 18, 16, 0.8);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
   border-bottom: 1px solid rgba(245, 239, 224, 0.08);
 }
 

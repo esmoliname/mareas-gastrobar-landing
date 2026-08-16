@@ -261,11 +261,12 @@ function closeAr() {
   color: var(--sand);
   font-size: 0.85rem;
   font-weight: 600;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .menu__chip:hover {
   border-color: var(--green-bright);
+  transform: translateY(-2px);
 }
 
 .menu__chip.is-active {

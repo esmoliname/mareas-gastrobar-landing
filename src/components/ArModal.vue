@@ -62,7 +62,7 @@ const platformLabel = computed(() => {
 });
 
 const stageExposure = computed(() => (warmLight.value ? 1.38 : 1.08));
-const stageShadow = computed(() => (warmLight.value ? "0.65" : "1.2"));
+const stageShadow = computed(() => (warmLight.value ? "1.8" : "1.5"));
 
 function webglSupported() {
   try {
@@ -247,10 +247,13 @@ function toggleFullscreen() {
               :ar-modes="arModes"
               camera-controls
               touch-action="pan-y"
+              interaction-prompt="auto"
               :auto-rotate="autoRotate"
               :auto-rotate-delay="0"
               :exposure="stageExposure"
               :shadow-intensity="stageShadow"
+              shadow-softness="1"
+              environment-image="neutral"
               autoplay
               @load="onLoad"
               @error="onError"
@@ -348,8 +351,10 @@ function toggleFullscreen() {
   max-height: calc(100svh - 32px);
   overflow-y: auto;
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  border: 1px solid rgba(245, 239, 224, 0.12);
+  background: rgba(14, 26, 20, 0.82);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid rgba(245, 239, 224, 0.14);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 

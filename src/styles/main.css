@@ -39,6 +39,7 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-h) + 8px);
+  overflow-x: clip;
 }
 
 body {
@@ -50,6 +51,34 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(201, 162, 39, 0.35);
+  color: var(--cream);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #17301f, #0e1a14);
+  border-radius: 999px;
+  border: 2px solid var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--green), #17301f);
 }
 
 img,
@@ -147,6 +176,10 @@ h3 {
 
 .btn:active {
   transform: scale(0.98);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
 }
 
 .btn--primary {

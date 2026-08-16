@@ -317,8 +317,10 @@ function openWhatsapp() {
   display: flex;
   flex-direction: column;
   width: min(100%, 420px);
-  background: var(--bg-panel);
-  border-left: 1px solid rgba(245, 239, 224, 0.1);
+  background: rgba(14, 26, 20, 0.85);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border-left: 1px solid rgba(245, 239, 224, 0.14);
   box-shadow: -24px 0 60px rgba(0, 0, 0, 0.5);
   overflow-y: auto;
 }
@@ -331,10 +333,10 @@ function openWhatsapp() {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: rgba(14, 26, 20, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(245, 239, 224, 0.08);
+  background: rgba(14, 26, 20, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(245, 239, 224, 0.1);
 }
 
 .cart-head__title {
@@ -693,10 +695,10 @@ function openWhatsapp() {
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px 20px;
-  background: rgba(14, 26, 20, 0.94);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(245, 239, 224, 0.08);
+  background: rgba(14, 26, 20, 0.8);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(245, 239, 224, 0.1);
 }
 
 .cart-totals {

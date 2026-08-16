@@ -2,7 +2,7 @@ import { modelCatalog } from "./models3d.js";
 
 export const categories = ["Pizzas", "Cócteles", "Mariscos", "Antojos", "Experiencias"];
 
-const U = (id, w = 900) =>
+const U = (id, w = 1200) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 const M = (key) => ({
@@ -29,7 +29,7 @@ export const seedMenu = [
     description: "Tocineta ahumada, crema de queso, champiñones salteados y un toque de romero.",
     price: 9800,
     category: "Pizzas",
-    image: U("photo-1565299624946-b28f40a0ae38"),
+    image: U("photo-1621996346565-e3dbc646d9a9"),
     tags: [],
     ...M("pizza"),
     popular: false,
@@ -125,7 +125,7 @@ export const seedMenu = [
     description: "Camarones grandes salteados en mantequilla de ajo con pan tostado para untar.",
     price: 8900,
     category: "Mariscos",
-    image: U("photo-1559737558-2f5a35f4523b"),
+    image: U("photo-1559847844-5315695dadae"),
     tags: ["Chef"],
     ...M("dish"),
     popular: false,

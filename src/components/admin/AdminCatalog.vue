@@ -644,8 +644,11 @@ function onReset() {
   max-height: calc(100svh - 32px);
   overflow-y: auto;
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  border: 1px solid rgba(245, 239, 224, 0.12);
+  background: rgba(14, 26, 20, 0.85);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid rgba(245, 239, 224, 0.14);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
   padding: 22px;
 }
 

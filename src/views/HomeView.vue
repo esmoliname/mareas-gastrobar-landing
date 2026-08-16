@@ -7,7 +7,7 @@ import CategoryTicker from "../components/CategoryTicker.vue";
 import HighlightsSection from "../components/HighlightsSection.vue";
 import ExperienceSection from "../components/ExperienceSection.vue";
 import SocialProofSection from "../components/SocialProofSection.vue";
-import GallerySection from "../components/GallerySection.vue";
+import SocialFeed from "../components/SocialFeed.vue";
 import LocationSection from "../components/LocationSection.vue";
 import ReservationSection from "../components/ReservationSection.vue";
 import FinalCtaSection from "../components/FinalCtaSection.vue";
@@ -38,7 +38,7 @@ onMounted(() => {
     <HighlightsSection />
     <ExperienceSection />
     <SocialProofSection />
-    <GallerySection />
+    <SocialFeed />
     <LocationSection :status="status" />
     <ReservationSection />
     <FinalCtaSection />

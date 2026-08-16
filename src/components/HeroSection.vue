@@ -11,6 +11,14 @@ defineProps({
 <template>
   <section id="top" class="hero">
     <div class="hero__bg" aria-hidden="true">
+      <img
+        class="hero__img"
+        src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1920&q=80"
+        alt=""
+        fetchpriority="high"
+        decoding="async"
+      />
+      <div class="hero__shade"></div>
       <div class="hero__sun"></div>
       <div class="hero__palm" aria-hidden="true">🌴</div>
       <div class="hero__palm hero__palm--far" aria-hidden="true">🌴</div>
@@ -69,10 +77,7 @@ defineProps({
   align-items: flex-end;
   min-height: calc(100svh - var(--header-h));
   padding-block: 56px 48px;
-  background:
-    radial-gradient(140% 90% at 80% 10%, rgba(232, 122, 93, 0.4) 0%, transparent 55%),
-    radial-gradient(80% 50% at 20% 85%, rgba(46, 158, 91, 0.22) 0%, transparent 60%),
-    linear-gradient(170deg, #14201a 0%, #0e1a14 55%, #0b1210 100%);
+  background: linear-gradient(170deg, #14201a 0%, #0e1a14 55%, #0b1210 100%);
   overflow: hidden;
 }
 
@@ -80,6 +85,34 @@ defineProps({
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+.hero__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+  opacity: 0.38;
+  animation: hero-zoom 24s ease-in-out infinite alternate;
+}
+
+@keyframes hero-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.hero__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(11, 18, 16, 0.62) 0%, rgba(11, 18, 16, 0.28) 40%, rgba(11, 18, 16, 0.9) 100%),
+    radial-gradient(120% 80% at 20% 15%, rgba(46, 158, 91, 0.18) 0%, transparent 55%);
 }
 
 .hero__sun {
@@ -215,7 +248,9 @@ defineProps({
   padding: 16px;
   border: 1px solid rgba(245, 239, 224, 0.1);
   border-radius: var(--radius-md);
-  background: rgba(14, 26, 20, 0.6);
+  background: rgba(14, 26, 20, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   font-size: 0.82rem;
 }
 
@@ -227,6 +262,12 @@ defineProps({
 
 .hero__meta dd {
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__img {
+    animation: none;
+  }
 }
 
 @media (min-width: 768px) {
