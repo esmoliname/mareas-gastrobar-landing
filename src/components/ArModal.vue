@@ -32,6 +32,7 @@ const viewerRef = ref(null);
 const stageRef = ref(null);
 const closeBtnRef = ref(null);
 const loading = ref(true);
+const loadProgress = ref(0);
 const modelError = ref(false);
 const arSupported = ref(false);
 const arChecked = ref(false);
@@ -41,7 +42,7 @@ const warmLight = ref(false);
 const zoomedIn = ref(false);
 const viewerReady = ref(false);
 
-const LOAD_TIMEOUT_MS = 20000;
+const LOAD_TIMEOUT_MS = 8000;
 let loadTimer = null;
 
 const resolved = computed(() => (props.item ? resolveModel(props.item.model) : null));
@@ -62,6 +63,10 @@ const modelScale = computed(() => {
   return `${s} ${s} ${s}`;
 });
 
+// Ángulo de cámara inicial por modelo (definido en models3d.js) para resaltar
+// el volumen de cada platillo; se usa también al restablecer la cámara.
+const cameraOrbit = computed(() => resolved.value?.cameraOrbit || "0deg 75deg 105%");
+
 // Quick Look respeta el tamaño real: #allowsContentScaling=0 deshabilita el
 // gesto de reescalado con pellizco en iOS (requerido con ar-scale="fixed").
 const iosSrc = computed(() => {
@@ -70,7 +75,7 @@ const iosSrc = computed(() => {
   return base.includes("#allowsContentScaling=") ? base : `${base}#allowsContentScaling=0`;
 });
 
-const arModes = computed(() => (isIOS.value ? "quick-look" : "webxr scene-viewer quick-look"));
+const arModes = "webxr scene-viewer quick-look";
 
 const platformLabel = computed(() => {
   if (isIOS.value) return "iOS · Apple Quick Look";
@@ -78,7 +83,7 @@ const platformLabel = computed(() => {
   return "Desktop · Vista 360°";
 });
 
-const stageExposure = computed(() => (warmLight.value ? 1.45 : 1.15));
+const stageExposure = computed(() => (warmLight.value ? 1.45 : 1.1));
 
 function webglSupported() {
   try {
@@ -132,6 +137,7 @@ watch(open, async (isOpen) => {
   document.body.style.overflow = isOpen ? "hidden" : "";
   if (!isOpen) return;
   loading.value = true;
+  loadProgress.value = 0;
   modelError.value = false;
   arError.value = "";
   arChecked.value = false;
@@ -146,8 +152,13 @@ watch(open, async (isOpen) => {
   arChecked.value = true;
 });
 
+function onProgress(e) {
+  loadProgress.value = Number(e.detail?.totalProgress) || 0;
+}
+
 function onLoad() {
   loading.value = false;
+  loadProgress.value = 1;
   modelError.value = false;
   if (loadTimer) clearTimeout(loadTimer);
 }
@@ -163,6 +174,7 @@ function onError() {
 function retry() {
   arError.value = "";
   loading.value = true;
+  loadProgress.value = 0;
   modelError.value = false;
   startLoadWatchdog();
   const viewer = viewerRef.value;
@@ -182,7 +194,8 @@ function startLoadWatchdog() {
   loadTimer = setTimeout(() => {
     if (loading.value) {
       loading.value = false;
-      arError.value = "El modelo 3D tardó demasiado en cargar. Revisá tu conexión o intentá de nuevo.";
+      modelError.value = true;
+      arError.value = "El modelo 3D tardó demasiado en cargar. Mostramos la foto del platillo mientras tanto.";
     }
   }, LOAD_TIMEOUT_MS);
 }
@@ -209,7 +222,7 @@ function resetCamera() {
   const viewer = viewerRef.value;
   if (!viewer) return;
   try {
-    viewer.cameraOrbit = "0deg 75deg 105%";
+    viewer.cameraOrbit = cameraOrbit.value;
     viewer.fieldOfView = 30;
     if (typeof viewer.resetTurntableRotation === "function") viewer.resetTurntableRotation(0);
   } catch {
@@ -269,6 +282,9 @@ function toggleFullscreen() {
             <div v-if="loading" class="ar-modal__loader">
               <Loader2 :size="26" class="ar-modal__spin" aria-hidden="true" />
               <span>Preparando modelo 3D…</span>
+              <div class="ar-modal__progress" role="progressbar" aria-label="Progreso de descarga del modelo 3D" :aria-valuenow="Math.round(loadProgress * 100)" aria-valuemin="0" aria-valuemax="100">
+                <div class="ar-modal__progress-bar" :style="{ width: `${Math.round(loadProgress * 100)}%` }"></div>
+              </div>
             </div>
 
             <model-viewer
@@ -282,19 +298,21 @@ function toggleFullscreen() {
               ar-scale="fixed"
               ar-placement="floor"
               :scale="modelScale"
+              :camera-orbit="cameraOrbit"
               camera-controls
               touch-action="pan-y"
-              interaction-prompt="none"
+              interaction-prompt="auto"
               :auto-rotate="autoRotate"
               :auto-rotate-delay="0"
               :exposure="stageExposure"
-              shadow-intensity="2"
-              shadow-softness="0.8"
+              shadow-intensity="1.8"
+              shadow-softness="0.6"
               tone-mapping="aces"
               environment-image="neutral"
               autoplay
               @load="onLoad"
               @error="onError"
+              @progress="onProgress"
             ></model-viewer>
 
             <div class="ar-modal__hud" aria-hidden="true">
@@ -474,6 +492,21 @@ function toggleFullscreen() {
 .ar-modal__spin {
   color: var(--gold-light);
   animation: ar-spin 1s linear infinite;
+}
+
+.ar-modal__progress {
+  width: min(240px, 70%);
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(245, 239, 224, 0.12);
+  overflow: hidden;
+}
+
+.ar-modal__progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold), var(--green-bright));
+  transition: width 0.2s ease;
 }
 
 @keyframes ar-spin {
