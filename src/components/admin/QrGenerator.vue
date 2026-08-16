@@ -1,26 +1,38 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { Download, QrCode, Link2, RefreshCw, Copy, Check } from "lucide-vue-next";
+import { Download, FileText, Link2, RefreshCw, Copy, Check, Table2 } from "lucide-vue-next";
+import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
+import { config } from "../../config/index.js";
+import { notifyError, notifySuccess } from "../../utils/toast.js";
 
+const tableNumber = ref("");
 const menuUrl = ref("");
 const qrDataUrl = ref("");
 const generating = ref(false);
 const copied = ref(false);
-const fileName = computed(() => `mareas-menu-qr-${new Date().toISOString().slice(0, 10)}.png`);
+const fileName = computed(() => `mareas-mesa-${tableNumber.value || "menu"}-${new Date().toISOString().slice(0, 10)}.png`);
+const pdfFileName = computed(() => `mareas-mesa-${tableNumber.value || "menu"}-${new Date().toISOString().slice(0, 10)}.pdf`);
 
 onMounted(() => {
   menuUrl.value = window.location.origin + "/";
   generate();
 });
 
-watch(menuUrl, generate);
+watch([menuUrl, tableNumber], generate);
+
+function onTableInput(e) {
+  // Sanitización estricta: solo dígitos y dentro del rango de mesas permitido (1–99).
+  const maxLen = String(config.businessRules.maxTableNumber).length;
+  tableNumber.value = String(e.target.value).replace(/\D/g, "").slice(0, maxLen);
+}
 
 async function generate() {
   if (!menuUrl.value.trim()) return;
   generating.value = true;
   try {
-    qrDataUrl.value = await QRCode.toDataURL(menuUrl.value.trim(), {
+    const url = buildQrUrl();
+    qrDataUrl.value = await QRCode.toDataURL(url, {
       width: 800,
       margin: 2,
       color: { dark: "#0b1210", light: "#ffffff" },
@@ -34,20 +46,65 @@ async function generate() {
   }
 }
 
+function buildQrUrl() {
+  const base = menuUrl.value.trim().replace(/\/+$/, "");
+  const cleanTable = tableNumber.value.trim();
+  if (!cleanTable) return `${base}/`;
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}mesa=${encodeURIComponent(cleanTable)}`;
+}
+
 function download() {
   const a = document.createElement("a");
   a.href = qrDataUrl.value;
   a.download = fileName.value;
   a.click();
+  notifySuccess("Imagen PNG descargada.");
+}
+
+function exportPdf() {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const brand = "🌴 MARÉAS · GASTROBAR TROPICAL";
+  const label = tableNumber.value.trim() ? `Código QR — Mesa ${tableNumber.value}` : "Código QR — Menú digital";
+  const sub = "Escaneá para ver el menú y pedir desde la mesa.";
+
+  doc.setFillColor(11, 18, 16);
+  doc.rect(0, 0, 297, 210, "F");
+  doc.setFillColor(30, 122, 70);
+  doc.rect(0, 0, 297, 10, "F");
+
+  doc.setTextColor(217, 178, 60);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.text(brand, 148, 32, { align: "center" });
+
+  doc.setTextColor(255, 253, 247);
+  doc.setFontSize(34);
+  doc.text(label, 148, 52, { align: "center" });
+
+  doc.setTextColor(159, 176, 166);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.text(sub, 148, 62, { align: "center" });
+
+  doc.addImage(qrDataUrl.value, "PNG", 78, 72, 140, 140);
+
+  doc.setTextColor(217, 178, 60);
+  doc.setFontSize(11);
+  doc.text(buildQrUrl(), 148, 196, { align: "center" });
+
+  doc.save(pdfFileName.value);
+  notifySuccess("PDF A4 generado y descargado.");
 }
 
 async function copyUrl() {
   try {
-    await navigator.clipboard.writeText(menuUrl.value.trim());
+    await navigator.clipboard.writeText(buildQrUrl());
     copied.value = true;
+    notifySuccess("URL del QR copiada al portapapeles.");
     setTimeout(() => (copied.value = false), 1600);
   } catch {
-    /* portapapeles no disponible */
+    notifyError("No se pudo copiar la URL. Copiala manualmente.");
   }
 }
 </script>
@@ -60,17 +117,29 @@ async function copyUrl() {
           <img v-if="qrDataUrl" :src="qrDataUrl" alt="Código QR del menú digital de Mareas" class="qr__img" />
           <RefreshCw v-else :size="28" class="qr__spin" aria-hidden="true" />
         </div>
-        <p class="qr__caption">Menú digital — escaneá para pedir desde la mesa</p>
+        <p class="qr__caption">
+          {{ tableNumber.trim() ? `Mesa ${tableNumber.trim()} — escaneá y pedí desde tu mesa` : "Menú digital — escaneá para pedir" }}
+        </p>
       </div>
 
       <div class="qr__controls">
-        <h2 class="admin-card__title">Generador de Código QR</h2>
+        <h2 class="admin-card__title">Generador de Códigos QR por Mesa</h2>
         <p class="admin-card__subtitle">
-          El QR apunta al menú digital de Mareas. Imprimilo y colocálo en las mesas para que tus clientes escaneen y pidan al instante.
+          Generá un QR parametrizado con el número de mesa. Al escanearlo, el cliente entra al menú con
+          <strong>su mesa ya seleccionada</strong> y el pedido llega a WhatsApp identificado.
         </p>
 
         <label class="field">
-          <span>URL del menú digital</span>
+          <span>Número de mesa</span>
+          <div class="qr__input-row">
+            <Table2 :size="16" class="qr__input-icon" aria-hidden="true" />
+            <input :value="tableNumber" type="text" inputmode="numeric" placeholder="Ej: 5 (vacío = menú general)" @input="onTableInput" />
+          </div>
+          <small class="field__hint">Cada mesa necesita su propio código. Dejalo vacío para el QR general del menú.</small>
+        </label>
+
+        <label class="field">
+          <span>URL base del menú digital</span>
           <div class="qr__input-row">
             <Link2 :size="16" class="qr__input-icon" aria-hidden="true" />
             <input v-model="menuUrl" type="url" placeholder="https://tu-dominio.com/" />
@@ -79,17 +148,23 @@ async function copyUrl() {
               <Copy v-else :size="15" />
             </button>
           </div>
-          <small class="field__hint">Cualquier cambio regenera el código al instante.</small>
+          <small class="field__hint">El QR apunta a: <code>{{ buildQrUrl() }}</code></small>
         </label>
 
-        <button class="btn btn--primary qr__download" type="button" :disabled="!qrDataUrl" @click="download">
-          <Download :size="17" aria-hidden="true" />
-          Descargar PNG (imprimir)
-        </button>
+        <div class="qr__actions">
+          <button class="btn btn--primary" type="button" :disabled="!qrDataUrl" @click="download">
+            <Download :size="17" aria-hidden="true" />
+            PNG para imprimir
+          </button>
+          <button class="btn btn--ghost" type="button" :disabled="!qrDataUrl" @click="exportPdf">
+            <FileText :size="17" aria-hidden="true" />
+            PDF (A4 horizontal)
+          </button>
+        </div>
 
         <ul class="qr__tips">
           <li>Imprimí en tamaño mínimo 8 × 8 cm para escaneo rápido desde el celular.</li>
-          <li>Colocá el QR en ángulo plano sobre la mesa o en tarjetas plastificadas.</li>
+          <li>El QR incluye <code>?mesa=X</code> y la mesa queda pre-seleccionada en el pedido.</li>
           <li>El estado "disponible / agotado" del catálogo se refleja directo en el menú escaneado.</li>
         </ul>
       </div>
@@ -215,11 +290,21 @@ async function copyUrl() {
   font-size: 0.72rem;
 }
 
-.qr__download {
-  align-self: flex-start;
+.field__hint code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--bg-deep);
+  color: var(--gold-light);
+  font-size: 0.7rem;
 }
 
-.qr__download:disabled {
+.qr__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qr__actions .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -241,5 +326,13 @@ async function copyUrl() {
   content: "→ ";
   color: var(--gold);
   font-weight: 700;
+}
+
+.qr__tips code {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--bg-deep);
+  color: var(--gold-light);
+  font-size: 0.72rem;
 }
 </style>

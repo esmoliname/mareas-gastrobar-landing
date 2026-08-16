@@ -9,11 +9,13 @@ import ExperienceSection from "../components/ExperienceSection.vue";
 import SocialProofSection from "../components/SocialProofSection.vue";
 import GallerySection from "../components/GallerySection.vue";
 import LocationSection from "../components/LocationSection.vue";
+import ReservationSection from "../components/ReservationSection.vue";
 import FinalCtaSection from "../components/FinalCtaSection.vue";
 import SiteFooter from "../components/SiteFooter.vue";
 import WhatsappFab from "../components/WhatsappFab.vue";
+import CartDrawer from "../components/CartDrawer.vue";
 import { getStatus } from "../utils/hours.js";
-import { settings } from "../store/settings.js";
+import { settings } from "../stores/settings.js";
 
 const status = computed(() => getStatus());
 const showBanner = ref(false);
@@ -38,10 +40,12 @@ onMounted(() => {
     <SocialProofSection />
     <GallerySection />
     <LocationSection :status="status" />
+    <ReservationSection />
     <FinalCtaSection />
   </main>
   <SiteFooter />
   <WhatsappFab />
+  <CartDrawer />
 </template>
 
 <style scoped>

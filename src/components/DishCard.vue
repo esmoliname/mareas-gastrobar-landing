@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from "vue";
-import { Box, Flame } from "lucide-vue-next";
+import { Box, Flame, Plus } from "lucide-vue-next";
 import { formatColones } from "../utils/format.js";
+import { useCartStore } from "../stores/cart.js";
+import { notifySuccess } from "../utils/toast.js";
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -9,7 +11,14 @@ const props = defineProps({
 
 defineEmits(["open-ar"]);
 
+const cart = useCartStore();
+
 const imageAlt = computed(() => `${props.item.name} — Mareas Gastrobar Tropical`);
+
+function addToCart() {
+  cart.addItem(props.item);
+  notifySuccess(`${props.item.name} se agregó a tu pedido.`);
+}
 </script>
 
 <template>
@@ -30,6 +39,7 @@ const imageAlt = computed(() => `${props.item.name} — Mareas Gastrobar Tropica
         <Flame :size="13" aria-hidden="true" />
         Popular
       </span>
+      <span v-for="tag in item.tags" :key="tag" class="dish__badge dish__badge--tag">{{ tag }}</span>
       <span v-if="!item.available" class="dish__badge dish__badge--soldout">Agotado</span>
     </div>
 
@@ -40,10 +50,16 @@ const imageAlt = computed(() => `${props.item.name} — Mareas Gastrobar Tropica
       </div>
       <h3 class="dish__name">{{ item.name }}</h3>
       <p class="dish__desc">{{ item.description }}</p>
-      <button class="btn btn--outline dish__ar" type="button" @click="$emit('open-ar', item)">
-        <Box :size="16" aria-hidden="true" />
-        Ver en RA
-      </button>
+      <div class="dish__actions">
+        <button class="btn btn--primary dish__add" type="button" :disabled="!item.available" @click="addToCart">
+          <Plus :size="16" aria-hidden="true" />
+          Agregar
+        </button>
+        <button class="btn btn--outline dish__ar" type="button" @click="$emit('open-ar', item)">
+          <Box :size="16" aria-hidden="true" />
+          Ver en RA
+        </button>
+      </div>
     </div>
   </article>
 </template>
@@ -107,6 +123,14 @@ const imageAlt = computed(() => `${props.item.name} — Mareas Gastrobar Tropica
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
+.dish__badge--tag {
+  top: 12px;
+  right: 12px;
+  left: auto;
+  background: rgba(46, 158, 91, 0.9);
+  color: #fff;
+}
+
 .dish__badge--soldout {
   background: rgba(11, 18, 16, 0.85);
   color: var(--muted);
@@ -154,9 +178,22 @@ const imageAlt = computed(() => `${props.item.name} — Mareas Gastrobar Tropica
   flex: 1;
 }
 
-.dish__ar {
+.dish__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin-top: 6px;
+}
+
+.dish__add,
+.dish__ar {
   min-height: 42px;
   font-size: 0.85rem;
+  padding-inline: 12px;
+}
+
+.dish__add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

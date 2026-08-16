@@ -1,11 +1,15 @@
+import { config } from "../config/index.js";
+import { buildWhatsappUrl } from "../services/whatsapp.js";
+
 export const site = {
   brand: "Mareas | Gastrobar Tropical",
   tagline: "Comida, cócteles y buena vibra. Tropical, relajado y sin prisa.",
 
-  phoneDisplay: "+506 2460-9500",
-  phoneTel: "+50624609500",
-  whatsappNumber: "50689779500",
+  phoneDisplay: config.contact.phoneDisplay,
+  phoneTel: config.contact.phoneTel,
+  whatsappNumber: config.contact.whatsappNumber,
   whatsappMessage: "¡Hola Mareas! Quiero reservar una mesa para hoy. 🌴",
+  email: config.contact.email,
 
   instagram: "https://www.instagram.com/mareas.cr",
   instagramHandle: "@mareas.cr",
@@ -20,7 +24,6 @@ export const site = {
 
   addressLine1: "400 mts Sur del INA",
   addressLine2: "Barrio Lourdes, Ciudad Quesada, San Carlos, 21001",
-  email: "empleos@mareascr.com",
 
   rating: { value: 4.4, count: "900+", source: "Google" },
 
@@ -49,5 +52,4 @@ export const site = {
   ],
 };
 
-export const whatsappUrl = (message = site.whatsappMessage) =>
-  `https://wa.me/${site.whatsappNumber}?text=${encodeURIComponent(message)}`;
+export const whatsappUrl = (message = site.whatsappMessage) => buildWhatsappUrl(message);

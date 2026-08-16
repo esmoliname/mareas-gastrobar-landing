@@ -1,4 +1,5 @@
 import { reactive, watch } from "vue";
+import { storageGetJSON, storageSetJSON } from "../utils/storage.js";
 
 const STORAGE_KEY = "mareas:settings:v1";
 
@@ -23,17 +24,7 @@ const themes = {
   },
 };
 
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-const saved = load();
+const saved = storageGetJSON(STORAGE_KEY);
 
 export const settings = reactive({
   theme: saved?.theme && themes[saved.theme] ? saved.theme : "tropical",
@@ -66,11 +57,7 @@ export function applyTheme() {
 watch(
   settings,
   (value) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-    } catch {
-      /* almacenamiento no disponible */
-    }
+    storageSetJSON(STORAGE_KEY, value);
     applyTheme();
   },
   { deep: true }

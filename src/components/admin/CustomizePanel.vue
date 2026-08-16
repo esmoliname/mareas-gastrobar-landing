@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { Palette, Megaphone, RotateCcw, ExternalLink } from "lucide-vue-next";
-import { settings, themeOptions, setTheme, setBanner, applyTheme } from "../../store/settings.js";
+import { settings, themeOptions, setTheme, setBanner, applyTheme } from "../../stores/settings.js";
 import StarRating from "../StarRating.vue";
 
 const themeEntries = computed(() => Object.entries(themeOptions));

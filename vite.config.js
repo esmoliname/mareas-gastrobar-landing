@@ -13,8 +13,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          modelviewer: ["@google/model-viewer"],
-          vendor: ["vue", "vue-router", "lucide-vue-next", "qrcode"],
+          // @google/model-viewer (~1 MB) se descarga solo al abrir el modal 3D/AR
+          "model-viewer": ["@google/model-viewer"],
+          "vue-vendor": ["vue", "vue-router", "pinia"],
+          "ui-icons": ["lucide-vue-next"],
+          qrcode: ["qrcode"],
         },
       },
     },

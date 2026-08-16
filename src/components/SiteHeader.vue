@@ -1,10 +1,16 @@
 <script setup>
+import { computed } from "vue";
+import { ShoppingBag } from "lucide-vue-next";
 import { site, whatsappUrl } from "../data/site.js";
+import { useCartStore } from "../stores/cart.js";
 import WhatsappIcon from "./WhatsappIcon.vue";
 
 defineProps({
   status: { type: Object, required: true },
 });
+
+const cart = useCartStore();
+const cartCount = computed(() => cart.count);
 </script>
 
 <template>
@@ -29,6 +35,15 @@ defineProps({
           <span class="status-badge__label">{{ status.open ? "Abierto ahora" : "Cerrado" }}</span>
           <span class="status-badge__note">{{ status.note }}</span>
         </span>
+        <button
+          class="site-header__cart"
+          type="button"
+          aria-label="Abrir carrito de pedidos"
+          @click="cart.open()"
+        >
+          <ShoppingBag :size="19" aria-hidden="true" />
+          <span class="site-header__cart-badge" v-if="cartCount">{{ cartCount }}</span>
+        </button>
         <a class="site-header__phone" :href="`tel:${site.phoneTel}`" aria-label="Llamar a Mareas">
           {{ site.phoneDisplay }}
         </a>
@@ -102,6 +117,42 @@ defineProps({
   gap: 10px;
 }
 
+.site-header__cart {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 239, 224, 0.16);
+  background: rgba(245, 239, 224, 0.05);
+  color: var(--sand);
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.site-header__cart:hover {
+  border-color: var(--gold);
+  color: var(--gold-light);
+}
+
+.site-header__cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #141003;
+  font-size: 0.68rem;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
 .site-header__wa {
   display: inline-flex;
   align-items: center;
@@ -121,7 +172,7 @@ defineProps({
 }
 
 .status-badge {
-  display: inline-flex;
+  display: none;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
@@ -130,6 +181,12 @@ defineProps({
   font-weight: 600;
   background: rgba(245, 239, 224, 0.06);
   border: 1px solid rgba(245, 239, 224, 0.1);
+}
+
+@media (min-width: 768px) {
+  .status-badge {
+    display: inline-flex;
+  }
 }
 
 .status-badge__dot {

@@ -1,13 +1,17 @@
 <script setup>
-import { computed, defineAsyncComponent, ref } from "vue";
-import { Search, ScanLine, Box } from "lucide-vue-next";
-import { catalog, menuCategories } from "../store/catalog.js";
+import { computed, defineAsyncComponent, onMounted, ref } from "vue";
+import { Search, ScanLine, Box, X, UtensilsCrossed } from "lucide-vue-next";
+import { catalog, menuCategories } from "../stores/catalog.js";
+import { useCartStore } from "../stores/cart.js";
+import { config } from "../config/index.js";
 import DishCard from "./DishCard.vue";
 
 const ArModal = defineAsyncComponent(() => import("./ArModal.vue"));
 
+const cart = useCartStore();
 const query = ref("");
 const activeCategory = ref("Todos");
+const tableFromUrl = ref("");
 
 const chips = computed(() => ["Todos", ...menuCategories]);
 
@@ -26,6 +30,24 @@ const filtered = computed(() => {
 });
 
 const arItem = ref(null);
+
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search);
+  const mesa = String(params.get("mesa") || "").trim();
+  // Validación estricta: solo dígitos, 1–2 caracteres, dentro del rango de mesas.
+  if (/^\d{1,2}$/.test(mesa)) {
+    const n = Number(mesa);
+    if (n >= 1 && n <= config.businessRules.maxTableNumber) {
+      tableFromUrl.value = String(n);
+      cart.setTable(String(n));
+    }
+  }
+});
+
+function clearTable() {
+  tableFromUrl.value = "";
+  cart.tableNumber = "";
+}
 
 function openAr(item) {
   arItem.value = item;
@@ -58,6 +80,14 @@ function closeAr() {
           autocomplete="off"
         />
         <span v-if="query" class="menu__count">{{ filtered.length }} resultado{{ filtered.length === 1 ? "" : "s" }}</span>
+      </div>
+
+      <div v-if="tableFromUrl" class="menu__table-chip" role="status">
+        <UtensilsCrossed :size="15" aria-hidden="true" />
+        <span>Escaneaste el QR de la <strong>Mesa {{ tableFromUrl }}</strong> — tu pedido se enviará a esa mesa.</span>
+        <button type="button" aria-label="Quitar selección de mesa" @click="clearTable">
+          <X :size="14" />
+        </button>
       </div>
 
       <div class="menu__chips" role="tablist" aria-label="Categorías del menú">
@@ -179,7 +209,44 @@ function closeAr() {
 }
 
 @media (min-width: 768px) {
-  .menu__chips {
+.menu__table-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  max-width: 620px;
+  margin: 14px auto 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  color: var(--sand);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.menu__table-chip svg:first-child {
+  color: var(--gold-light);
+  flex-shrink: 0;
+}
+
+.menu__table-chip button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.menu__table-chip button:hover {
+  color: var(--gold-light);
+}
+
+.menu__chips {
     justify-content: center;
     flex-wrap: wrap;
   }

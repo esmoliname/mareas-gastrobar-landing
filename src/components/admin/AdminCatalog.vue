@@ -4,8 +4,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Eye,
-  EyeOff,
   RotateCcw,
   Save,
   X,
@@ -20,9 +18,13 @@ import {
   toggleAvailability,
   togglePopular,
   resetCatalog,
-} from "../../store/catalog.js";
-import { models } from "../../data/menu.js";
+} from "../../stores/catalog.js";
+import { modelOptions } from "../../data/models3d.js";
 import { formatColones } from "../../utils/format.js";
+import { config } from "../../config/index.js";
+import { notifyError, notifyInfo, notifySuccess } from "../../utils/toast.js";
+
+const TAG_OPTIONS = ["Nuevo", "Popular", "Chef"];
 
 const formOpen = ref(false);
 const editingId = ref(null);
@@ -32,20 +34,40 @@ const form = reactive({
   price: "",
   description: "",
   image: "",
-  model: models.avocado,
+  model: modelOptions[0].glb,
+  usdz: modelOptions[0].usdz,
+  tags: [],
   popular: false,
   available: true,
 });
 
-const modelOptions = [
-  { label: "Fruta tropical (por defecto)", value: models.watermelon },
-  { label: "Platillo clásico", value: models.avocado },
-  { label: "Cóctel / botella", value: models.waterbottle },
-  { label: "Experiencia / ambiente", value: models.lantern },
-];
-
 const formTitle = computed(() => (editingId.value ? "Editar platillo" : "Nuevo platillo"));
 const availableCount = computed(() => catalog.items.filter((i) => i.available).length);
+
+function validateForm() {
+  if (!form.name.trim()) return "El nombre del platillo es obligatorio.";
+  if (form.name.trim().length > config.businessRules.maxNameLength) {
+    return `El nombre no puede superar ${config.businessRules.maxNameLength} caracteres.`;
+  }
+  const price = Number(form.price);
+  if (!Number.isFinite(price) || price <= 0) return "Ingresá un precio válido mayor a cero.";
+  return "";
+}
+
+function toggleTag(tag) {
+  if (form.tags.includes(tag)) {
+    form.tags = form.tags.filter((t) => t !== tag);
+  } else {
+    form.tags = [...form.tags, tag];
+  }
+}
+
+function onModelChange(key) {
+  const opt = modelOptions.find((o) => o.key === key);
+  if (!opt) return;
+  form.model = opt.glb;
+  if (!form.usdz) form.usdz = opt.usdz;
+}
 
 function openCreate() {
   editingId.value = null;
@@ -55,7 +77,9 @@ function openCreate() {
     price: "",
     description: "",
     image: "",
-    model: models.avocado,
+    model: modelOptions[0].glb,
+    usdz: modelOptions[0].usdz,
+    tags: [],
     popular: false,
     available: true,
   });
@@ -71,6 +95,8 @@ function openEdit(item) {
     description: item.description,
     image: item.image,
     model: item.model,
+    usdz: item.usdz || "",
+    tags: Array.isArray(item.tags) ? [...item.tags] : [],
     popular: item.popular,
     available: item.available,
   });
@@ -83,22 +109,40 @@ function closeForm() {
 }
 
 function submit() {
-  if (!form.name.trim()) return;
+  const problem = validateForm();
+  if (problem) {
+    notifyError(problem);
+    return;
+  }
   const payload = { ...form };
   if (editingId.value) {
     updateItem(editingId.value, payload);
+    notifySuccess("Platillo actualizado. Los cambios ya están visibles en el menú.");
   } else {
     addItem(payload);
+    notifySuccess("Platillo agregado al catálogo.");
   }
   closeForm();
 }
 
 function onToggle(item) {
   toggleAvailability(item.id);
+  notifySuccess(item.available ? `${item.name} ahora está disponible.` : `${item.name} marcado como agotado.`);
 }
 
 function onTogglePopular(item) {
   togglePopular(item.id);
+  notifySuccess(item.popular ? `${item.name} ya no es popular.` : `${item.name} marcado como popular.`);
+}
+
+function onRemove(item) {
+  removeItem(item.id);
+  notifyInfo(`${item.name} fue eliminado del catálogo.`);
+}
+
+function onReset() {
+  resetCatalog();
+  notifySuccess("Catálogo restaurado a la versión original.");
 }
 </script>
 
@@ -113,7 +157,7 @@ function onTogglePopular(item) {
         </p>
       </div>
       <div class="admin-card__actions">
-        <button class="btn btn--ghost btn--sm" type="button" @click="resetCatalog" title="Restaurar catálogo original">
+        <button class="btn btn--ghost btn--sm" type="button" @click="onReset" title="Restaurar catálogo original">
           <RotateCcw :size="15" aria-hidden="true" />
           Restaurar
         </button>
@@ -140,7 +184,7 @@ function onTogglePopular(item) {
           <tr v-for="item in catalog.items" :key="item.id" :class="{ 'is-disabled': !item.available }">
             <td>
               <div class="admin-table__dish">
-                <img v-if="item.image" :src="item.image" :alt="item.name" class="admin-table__thumb" loading="lazy" />
+                <img v-if="item.image" :src="item.image" :alt="item.name" class="admin-table__thumb" loading="lazy" decoding="async" />
                 <div v-else class="admin-table__thumb admin-table__thumb--empty">
                   <Box :size="16" aria-hidden="true" />
                 </div>
@@ -150,7 +194,12 @@ function onTogglePopular(item) {
                 </div>
               </div>
             </td>
-            <td><span class="admin-table__tag">{{ item.category }}</span></td>
+            <td>
+              <span class="admin-table__tag">{{ item.category }}</span>
+              <div v-if="item.tags && item.tags.length" class="admin-table__tags">
+                <span v-for="tag in item.tags" :key="tag" class="admin-table__mini-tag">{{ tag }}</span>
+              </div>
+            </td>
             <td class="admin-table__num admin-table__price">{{ formatColones(item.price) }}</td>
             <td>
               <button
@@ -184,7 +233,7 @@ function onTogglePopular(item) {
                   class="icon-btn icon-btn--danger"
                   type="button"
                   :aria-label="`Eliminar ${item.name}`"
-                  @click="removeItem(item.id)"
+                  @click="onRemove(item)"
                 >
                   <Trash2 :size="15" />
                 </button>
@@ -239,11 +288,42 @@ function onTogglePopular(item) {
 
             <label class="field field--span2">
               <span>Modelo 3D (AR)</span>
-              <select v-model="form.model">
-                <option v-for="opt in modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              <select :value="modelOptions.find((o) => o.glb === form.model)?.key" @change="onModelChange($event.target.value)">
+                <option v-for="opt in modelOptions" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+                <option v-if="!modelOptions.some((o) => o.glb === form.model)" value="custom" disabled>Modelo personalizado</option>
               </select>
-              <small class="field__hint">Cualquier URL .glb/.gltf funciona en el visor RA.</small>
+              <small class="field__hint">Cada categoría trae su modelo .glb y su versión .usdz para iOS (Apple Quick Look).</small>
             </label>
+
+            <label class="field field--span2">
+              <span>URL .glb (personalizada, opcional)</span>
+              <input v-model="form.model" type="url" placeholder="https://…/modelo.glb" />
+              <small class="field__hint">Si querés otro modelo, pegá aquí la URL directa del archivo .glb.</small>
+            </label>
+
+            <label class="field field--span2">
+              <span>URL .usdz para iOS (opcional)</span>
+              <input v-model="form.usdz" type="url" placeholder="https://…/modelo.usdz" />
+              <small class="field__hint">Apple Quick Look abre el .usdz en iPhone/iPad. Dejalo vacío si no tenés versión iOS.</small>
+            </label>
+
+            <div class="field field--span2">
+              <span>Etiquetas</span>
+              <div class="tags-picker">
+                <button
+                  v-for="tag in TAG_OPTIONS"
+                  :key="tag"
+                  type="button"
+                  class="tags-picker__chip"
+                  :class="{ 'is-active': form.tags.includes(tag) }"
+                  :aria-pressed="form.tags.includes(tag)"
+                  @click="toggleTag(tag)"
+                >
+                  {{ tag }}
+                </button>
+              </div>
+              <small class="field__hint">Se muestran como badges sobre la foto del platillo.</small>
+            </div>
 
             <label class="check">
               <input v-model="form.popular" type="checkbox" />
@@ -419,6 +499,52 @@ function onTogglePopular(item) {
   font-size: 0.74rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.admin-table__tags {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+.admin-table__mini-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  color: var(--gold-light);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tags-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tags-picker__chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 239, 224, 0.16);
+  background: var(--bg-panel-2);
+  color: var(--sand);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.tags-picker__chip:hover {
+  border-color: var(--green-bright);
+}
+
+.tags-picker__chip.is-active {
+  background: linear-gradient(135deg, var(--green), var(--green-bright));
+  border-color: transparent;
+  color: #fff;
 }
 
 .admin-table__price {
