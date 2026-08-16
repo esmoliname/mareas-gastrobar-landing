@@ -30,7 +30,9 @@ const emit = defineEmits(["close"]);
 const open = computed(() => Boolean(props.item));
 const viewerRef = ref(null);
 const stageRef = ref(null);
+const closeBtnRef = ref(null);
 const loading = ref(true);
+const modelError = ref(false);
 const arSupported = ref(false);
 const arChecked = ref(false);
 const arError = ref("");
@@ -76,6 +78,18 @@ function webglSupported() {
   }
 }
 
+// canActivateAR es un getter booleano síncrono en @google/model-viewer,
+// no una función ni una promesa.
+function canUseAr() {
+  const viewer = viewerRef.value;
+  if (!viewer) return false;
+  try {
+    return Boolean(viewer.canActivateAR);
+  } catch {
+    return false;
+  }
+}
+
 function onKeydown(e) {
   if (e.key === "Escape" && open.value) emit("close");
 }
@@ -104,6 +118,7 @@ watch(open, async (isOpen) => {
   document.body.style.overflow = isOpen ? "hidden" : "";
   if (!isOpen) return;
   loading.value = true;
+  modelError.value = false;
   arError.value = "";
   arChecked.value = false;
   arSupported.value = false;
@@ -112,25 +127,20 @@ watch(open, async (isOpen) => {
   zoomedIn.value = false;
   startLoadWatchdog();
   await nextTick();
-  const viewer = viewerRef.value;
-  if (viewer) {
-    try {
-      const can = typeof viewer.canActivateAR === "function" ? await viewer.canActivateAR : false;
-      arSupported.value = Boolean(can);
-    } catch {
-      arSupported.value = false;
-    }
-    arChecked.value = true;
-  }
+  closeBtnRef.value?.focus();
+  arSupported.value = canUseAr();
+  arChecked.value = true;
 });
 
 function onLoad() {
   loading.value = false;
+  modelError.value = false;
   if (loadTimer) clearTimeout(loadTimer);
 }
 
 function onError() {
   loading.value = false;
+  modelError.value = true;
   if (loadTimer) clearTimeout(loadTimer);
   arError.value = "No se pudo cargar el modelo 3D. Revisá tu conexión e intentá de nuevo.";
   notifyError("Falló la carga del modelo 3D. Verificá tu conexión.");
@@ -139,12 +149,18 @@ function onError() {
 function retry() {
   arError.value = "";
   loading.value = true;
+  modelError.value = false;
   startLoadWatchdog();
   const viewer = viewerRef.value;
-  if (viewer && typeof viewer.dismissPoster === "function") viewer.dismissPoster();
-  if (viewer && typeof viewer.load === "function" && resolved.value?.glb) {
-    viewer.load(resolved.value.glb);
-  }
+  if (!viewer) return;
+  if (typeof viewer.dismissPoster === "function") viewer.dismissPoster();
+  const src = resolved.value?.glb || "";
+  if (!src) return;
+  // model-viewer no expone un método load(): se fuerza la recarga vía src.
+  viewer.src = "";
+  requestAnimationFrame(() => {
+    viewer.src = src;
+  });
 }
 
 function startLoadWatchdog() {
@@ -160,18 +176,13 @@ function startLoadWatchdog() {
 async function launchAr() {
   const viewer = viewerRef.value;
   if (!viewer) return;
-  try {
-    const can = typeof viewer.canActivateAR === "function" ? await viewer.canActivateAR : false;
-    if (can) {
-      viewer.activateAR();
-      return;
-    }
-    if (isIOS.value && !props.item?.usdz) {
-      arError.value = "Este platillo aún no tiene archivo USDZ para iOS. Podés explorarlo en 3D acá mismo.";
-    } else {
-      arError.value = "Tu dispositivo no soporta Realidad Aumentada. Podés explorar el modelo en 3D acá mismo.";
-    }
-  } catch {
+  if (canUseAr()) {
+    viewer.activateAR();
+    return;
+  }
+  if (isIOS.value && !props.item?.usdz) {
+    arError.value = "Este platillo aún no tiene archivo USDZ para iOS. Podés explorarlo en 3D acá mismo.";
+  } else {
     arError.value = "Tu dispositivo no soporta Realidad Aumentada. Podés explorar el modelo en 3D acá mismo.";
   }
 }
@@ -186,7 +197,7 @@ function resetCamera() {
   try {
     viewer.cameraOrbit = "0deg 75deg 105%";
     viewer.fieldOfView = 30;
-    if (typeof viewer.resetTurntable === "function") viewer.resetTurntable();
+    if (typeof viewer.resetTurntableRotation === "function") viewer.resetTurntableRotation(0);
   } catch {
     /* API no disponible */
   }
@@ -227,11 +238,20 @@ function toggleFullscreen() {
     <Transition name="ar">
       <div v-if="open" class="ar-modal" role="dialog" aria-modal="true" aria-label="Vista 3D y Realidad Aumentada" @click.self="emit('close')">
         <div class="ar-modal__panel">
-          <button class="ar-modal__close" type="button" aria-label="Cerrar" @click="emit('close')">
+          <button ref="closeBtnRef" class="ar-modal__close" type="button" aria-label="Cerrar" @click="emit('close')">
             <X :size="22" />
           </button>
 
           <div ref="stageRef" class="ar-modal__stage" :class="{ 'is-warm': warmLight }">
+            <img
+              v-if="item.image && (loading || modelError)"
+              :src="item.image"
+              :alt="`Foto de ${item.name}`"
+              class="ar-modal__photo"
+              :class="{ 'is-loading': loading }"
+              aria-hidden="true"
+            />
+
             <div v-if="loading" class="ar-modal__loader">
               <Loader2 :size="26" class="ar-modal__spin" aria-hidden="true" />
               <span>Preparando modelo 3D…</span>
@@ -245,9 +265,11 @@ function toggleFullscreen() {
               :alt="`Modelo 3D de ${item.name}`"
               ar
               :ar-modes="arModes"
+              ar-scale="auto"
+              ar-placement="floor"
               camera-controls
               touch-action="pan-y"
-              interaction-prompt="auto"
+              interaction-prompt="none"
               :auto-rotate="autoRotate"
               :auto-rotate-delay="0"
               :exposure="stageExposure"
@@ -280,10 +302,10 @@ function toggleFullscreen() {
               </button>
             </div>
 
-            <div v-if="arError" class="ar-modal__error" role="alert">
+            <div v-if="modelError || (arError && !loading)" class="ar-modal__error" role="alert">
               <Box :size="18" aria-hidden="true" />
               <span>{{ arError }}</span>
-              <button class="ar-modal__retry" type="button" @click="retry">
+              <button v-if="modelError" class="ar-modal__retry" type="button" @click="retry">
                 <RefreshCw :size="13" />
                 Reintentar
               </button>
@@ -291,8 +313,11 @@ function toggleFullscreen() {
 
             <div v-if="!loading && arChecked && !arSupported" class="ar-modal__notice" role="status">
               <Smartphone :size="15" aria-hidden="true" />
-              <span>
+              <span v-if="isIOS || isAndroid">
                 Sin soporte AR en este dispositivo — usá los gestos táctiles para explorar el modelo en 360°.
+              </span>
+              <span v-else>
+                Este equipo no soporta Realidad Aumentada — arrastrá con el mouse para explorar el modelo en 360°.
               </span>
             </div>
           </div>
@@ -402,6 +427,20 @@ function toggleFullscreen() {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.ar-modal__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.ar-modal__photo.is-loading {
+  opacity: 0.35;
+  filter: blur(2px);
 }
 
 .ar-modal__loader {

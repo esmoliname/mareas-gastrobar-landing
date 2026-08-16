@@ -1,6 +1,6 @@
 <script setup>
 import { site } from "../data/site.js";
-import PlaceholderMedia from "./PlaceholderMedia.vue";
+import SmartImage from "./SmartImage.vue";
 </script>
 
 <template>
@@ -14,12 +14,14 @@ import PlaceholderMedia from "./PlaceholderMedia.vue";
 
       <ul class="highlights__grid" aria-label="Categorías destacadas">
         <li v-for="(item, i) in site.highlights" :key="item.id" class="highlights__card">
-          <PlaceholderMedia
-            :ratio="i % 2 === 0 ? '4/5' : '1/1'"
-            :tone="i % 3 === 0 ? 'sunset' : i % 3 === 1 ? 'food' : 'gold'"
-            :emoji="item.emoji"
-            :label="item.title"
-          />
+          <div class="highlights__media">
+            <SmartImage
+              :src="item.photo"
+              :alt="`${item.title} en Mareas Gastrobar`"
+              :ratio="i % 2 === 0 ? '4/5' : '1/1'"
+            />
+            <div class="highlights__shade" aria-hidden="true"></div>
+          </div>
           <div class="highlights__body">
             <h3>{{ item.title }}</h3>
             <p class="u-muted">{{ item.desc }}</p>
@@ -63,6 +65,21 @@ import PlaceholderMedia from "./PlaceholderMedia.vue";
   border-radius: var(--radius-lg);
   overflow: hidden;
   transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.highlights__media {
+  position: relative;
+}
+
+.highlights__media .smart-img {
+  border-radius: 0;
+}
+
+.highlights__shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, rgba(11, 18, 16, 0.5) 100%);
 }
 
 .highlights__body {

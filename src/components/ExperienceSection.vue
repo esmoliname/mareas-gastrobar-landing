@@ -1,6 +1,8 @@
 <script setup>
+import { Martini, Palmtree, PartyPopper, Pizza } from "lucide-vue-next";
 import { whatsappUrl } from "../data/site.js";
-import PlaceholderMedia from "./PlaceholderMedia.vue";
+import { photos } from "../data/images.js";
+import SmartImage from "./SmartImage.vue";
 import WhatsappIcon from "./WhatsappIcon.vue";
 </script>
 
@@ -17,10 +19,10 @@ import WhatsappIcon from "./WhatsappIcon.vue";
           vibra que baja el ritmo de todo.
         </p>
         <ul class="experience__list">
-          <li>🌴 Terraza con ambiente de playa, relajado y sin prisa</li>
-          <li>🍹 Cócteles de autor para quedar un rato más</li>
-          <li>🍕 Pizza y antojos para compartir mesa y charla</li>
-          <li>🎉 Noches de eventos, música y buena vibra</li>
+          <li><Palmtree :size="17" aria-hidden="true" /> Terraza con ambiente de playa, relajado y sin prisa</li>
+          <li><Martini :size="17" aria-hidden="true" /> Cócteles de autor para quedar un rato más</li>
+          <li><Pizza :size="17" aria-hidden="true" /> Pizza y antojos para compartir mesa y charla</li>
+          <li><PartyPopper :size="17" aria-hidden="true" /> Noches de eventos, música y buena vibra</li>
         </ul>
         <a class="btn btn--primary" :href="whatsappUrl()" target="_blank" rel="noopener noreferrer">
           <WhatsappIcon :size="20" />
@@ -29,9 +31,9 @@ import WhatsappIcon from "./WhatsappIcon.vue";
       </div>
 
       <div class="experience__media" aria-label="Galería de ambiente">
-        <PlaceholderMedia ratio="16/9" tone="sunset" emoji="🌅" label="Atardecer en Mareas" />
-        <PlaceholderMedia ratio="1/1" tone="food" emoji="🍹" label="Cóctel de la casa" />
-        <PlaceholderMedia ratio="1/1" tone="gold" emoji="🍕" label="Pizza al horno" />
+        <SmartImage :src="photos.experience.sunset" alt="Atardecer en Mareas" ratio="16/9" class="experience__shot experience__shot--wide" />
+        <SmartImage :src="photos.experience.cocktail" alt="Cóctel de la casa" ratio="1/1" class="experience__shot" />
+        <SmartImage :src="photos.experience.pizza" alt="Pizza al horno" ratio="1/1" class="experience__shot" />
       </div>
     </div>
   </section>
@@ -64,14 +66,29 @@ import WhatsappIcon from "./WhatsappIcon.vue";
   margin-bottom: 8px;
 }
 
+.experience__list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.experience__list svg {
+  color: var(--gold-light);
+  flex-shrink: 0;
+}
+
 .experience__media {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
 
-.experience__media .placeholder:first-child {
+.experience__media .experience__shot:first-child {
   grid-column: 1 / -1;
+}
+
+.experience__media .smart-img {
+  border-radius: var(--radius-md);
 }
 
 @media (min-width: 1024px) {

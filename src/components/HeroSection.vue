@@ -20,8 +20,18 @@ defineProps({
       />
       <div class="hero__shade"></div>
       <div class="hero__sun"></div>
-      <div class="hero__palm" aria-hidden="true">🌴</div>
-      <div class="hero__palm hero__palm--far" aria-hidden="true">🌴</div>
+      <svg class="hero__palm" viewBox="0 0 96 176" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M46 176c-2-34 2-62 10-96-9 1-20-4-30-13 9 2 17 0 23-5-8-9-13-22-13-37 11 8 18 16 22 25 4-9 12-17 25-25-1 14-6 26-14 36 7 5 17 7 28 6-9 8-19 12-29 13 2 10 3 30 1 46h-9c-2-12-4-21-5-26-2 5-4 14-5 26h-4z"
+        />
+      </svg>
+      <svg class="hero__palm hero__palm--far" viewBox="0 0 96 176" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M46 176c-2-34 2-62 10-96-9 1-20-4-30-13 9 2 17 0 23-5-8-9-13-22-13-37 11 8 18 16 22 25 4-9 12-17 25-25-1 14-6 26-14 36 7 5 17 7 28 6-9 8-19 12-29 13 2 10 3 30 1 46h-9c-2-12-4-21-5-26-2 5-4 14-5 26h-4z"
+        />
+      </svg>
     </div>
 
     <div class="container hero__content">
@@ -127,15 +137,17 @@ defineProps({
 
 .hero__palm {
   position: absolute;
-  font-size: 5.5rem;
+  width: 84px;
   bottom: 8%;
   left: -14px;
   opacity: 0.5;
   transform: rotate(-14deg);
+  color: #0c1511;
+  filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.45));
 }
 
 .hero__palm--far {
-  font-size: 3.2rem;
+  width: 52px;
   bottom: 20%;
   left: 22%;
   opacity: 0.25;
@@ -292,7 +304,7 @@ defineProps({
   }
 
   .hero__palm {
-    font-size: 8rem;
+    width: 128px;
     left: 4%;
   }
 

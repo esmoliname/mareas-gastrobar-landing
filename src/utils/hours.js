@@ -10,6 +10,14 @@ export function toMinutes(time) {
   return Number(h) * 60 + Number(m || "0");
 }
 
+export function format12h(time) {
+  const [h, m] = String(time || "").split(":");
+  const hour = Number(h);
+  const suffix = hour >= 12 ? "p.m." : "a.m.";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${m || "00"} ${suffix}`;
+}
+
 export function getStatus(now = new Date()) {
   const day = now.getDay();
   const mins = now.getHours() * 60 + now.getMinutes();
@@ -23,11 +31,13 @@ export function getStatus(now = new Date()) {
   const isOpen = earlyOpen || lateOpen || (mins >= OPEN_MIN && mins < CLOSE_WEEKDAY_MIN);
 
   if (earlyOpen || lateOpen) {
-    return { open: true, label: "Abierto ahora", note: "Hasta 12:45 a.m." };
+    return { open: true, label: "Abierto ahora", note: `Hasta ${format12h(config.hours.closeWeekend)}` };
   }
   return {
     open: isOpen,
     label: isOpen ? "Abierto ahora" : "Cerrado",
-    note: isOpen ? `Hasta las ${config.hours.closeWeekday} p.m.` : `Abrimos a las ${config.hours.open} a.m.`,
+    note: isOpen
+      ? `Hasta ${format12h(config.hours.closeWeekday)}`
+      : `Abrimos a las ${format12h(config.hours.open)}`,
   };
 }

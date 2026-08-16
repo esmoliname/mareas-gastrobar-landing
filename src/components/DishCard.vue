@@ -1,9 +1,11 @@
 <script setup>
 import { computed } from "vue";
-import { Box, Flame, Plus } from "lucide-vue-next";
+import { Flame, Plus } from "lucide-vue-next";
 import { formatColones } from "../utils/format.js";
 import { useCartStore } from "../stores/cart.js";
 import { notifySuccess } from "../utils/toast.js";
+import { photos } from "../data/images.js";
+import SmartImage from "./SmartImage.vue";
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -15,6 +17,13 @@ const cart = useCartStore();
 
 const imageAlt = computed(() => `${props.item.name} — Mareas Gastrobar Tropical`);
 
+const fallbackPhoto = computed(() => photos.category[props.item.category] || photos.category.Pizzas);
+
+// Los tags pueden incluir "Popular" y duplicar la insignia flame de popular.
+const extraTags = computed(() =>
+  (props.item.tags || []).filter((tag) => !(tag === "Popular" && props.item.popular))
+);
+
 function addToCart() {
   cart.addItem(props.item);
   notifySuccess(`${props.item.name} se agregó a tu pedido.`);
@@ -24,22 +33,19 @@ function addToCart() {
 <template>
   <article class="dish">
     <div class="dish__media">
-      <img
-        v-if="item.image"
+      <SmartImage
         :src="item.image"
+        :fallback="fallbackPhoto"
         :alt="imageAlt"
-        class="dish__img"
-        loading="lazy"
-        decoding="async"
+        ratio="4/3"
+        class="dish__img-wrap"
       />
-      <div v-else class="dish__fallback" aria-hidden="true">
-        <Box :size="30" />
-      </div>
+      <div class="dish__shade" aria-hidden="true"></div>
       <span v-if="item.popular" class="dish__badge">
         <Flame :size="13" aria-hidden="true" />
         Popular
       </span>
-      <span v-for="tag in item.tags" :key="tag" class="dish__badge dish__badge--tag">{{ tag }}</span>
+      <span v-for="tag in extraTags" :key="tag" class="dish__badge dish__badge--tag">{{ tag }}</span>
       <span v-if="!item.available" class="dish__badge dish__badge--soldout">Agotado</span>
     </div>
 
@@ -88,23 +94,25 @@ function addToCart() {
   background: var(--bg-panel-2);
 }
 
-.dish__img {
-  width: 100%;
+.dish__img-wrap {
+  position: absolute;
+  inset: 0;
   height: 100%;
-  object-fit: cover;
+}
+
+.dish__img-wrap :deep(.smart-img__el) {
   transition: transform 0.45s ease;
 }
 
-.dish:hover .dish__img {
+.dish:hover .dish__img-wrap :deep(.smart-img__el) {
   transform: scale(1.05);
 }
 
-.dish__fallback {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  color: var(--muted);
+.dish__shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(11, 18, 16, 0.25) 0%, transparent 30%, rgba(11, 18, 16, 0.45) 100%);
 }
 
 .dish__badge {

@@ -208,7 +208,6 @@ function closeAr() {
   display: none;
 }
 
-@media (min-width: 768px) {
 .menu__table-chip {
   display: flex;
   align-items: center;
@@ -246,7 +245,8 @@ function closeAr() {
   color: var(--gold-light);
 }
 
-.menu__chips {
+@media (min-width: 768px) {
+  .menu__chips {
     justify-content: center;
     flex-wrap: wrap;
   }

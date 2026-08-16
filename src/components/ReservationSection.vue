@@ -4,7 +4,7 @@ import { AlertTriangle, CalendarDays, CheckCircle2, Loader2, Send, Users } from 
 import { reservationWhatsappUrl } from "../services/reservations.js";
 import { useReservationStore } from "../stores/reservations.js";
 import { config } from "../config/index.js";
-import { toMinutes } from "../utils/hours.js";
+import { toMinutes, format12h } from "../utils/hours.js";
 import { notifyError } from "../utils/toast.js";
 import WhatsappIcon from "./WhatsappIcon.vue";
 
@@ -106,9 +106,9 @@ function validate() {
       return true;
     }
     if (timeMin < openMin) {
-      errors.time = `Abrimos a las ${OPEN} a.m. Elegí un horario dentro del horario comercial.`;
+      errors.time = `Abrimos a las ${format12h(OPEN)}. Elegí un horario dentro del horario comercial.`;
     } else if (timeMin >= closeWeekdayMin) {
-      errors.time = `Cerramos a las ${CLOSE_WEEKDAY} p.m. (o ${CLOSE_WEEKEND} en fin de semana). Elegí antes de esa hora.`;
+      errors.time = `Cerramos a las ${format12h(CLOSE_WEEKDAY)} (o ${format12h(CLOSE_WEEKEND)} en fin de semana). Elegí antes de esa hora.`;
     }
   }
 
@@ -156,8 +156,8 @@ function resetForm() {
             Viernes y sábados el local se llena temprano. Reservá y asegurate el mejor lugar de la casa.
           </p>
           <ul class="reservation__facts">
-            <li><CalendarDays :size="17" aria-hidden="true" /> Lun–Dom: 11:00 a.m. – 11:45 p.m.</li>
-            <li><CalendarDays :size="17" aria-hidden="true" /> Viernes y Sábado: hasta 12:45 a.m.</li>
+            <li><CalendarDays :size="17" aria-hidden="true" /> Lun–Dom: {{ format12h(config.hours.open) }} – {{ format12h(config.hours.closeWeekday) }}</li>
+            <li><CalendarDays :size="17" aria-hidden="true" /> Viernes y Sábado: hasta {{ format12h(config.hours.closeWeekend) }}</li>
             <li><Users :size="17" aria-hidden="true" /> Grupos desde 1 hasta {{ MAX_GUESTS }} comensales</li>
           </ul>
         </div>
@@ -189,7 +189,7 @@ function resetForm() {
                 <option v-for="t in availableTimes" :key="t" :value="t">{{ t }}</option>
               </select>
               <small v-if="errors.time" class="field__error">{{ errors.time }}</small>
-              <small v-else class="field__hint">Atención hasta las {{ closingTime }} ({{ isExtendedDay ? "fin de semana" : "entre semana" }})</small>
+              <small v-else class="field__hint">Atención hasta las {{ format12h(closingTime) }} ({{ isExtendedDay ? "fin de semana" : "entre semana" }})</small>
             </label>
           </div>
 

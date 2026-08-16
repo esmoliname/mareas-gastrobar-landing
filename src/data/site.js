@@ -1,5 +1,8 @@
 import { config } from "../config/index.js";
 import { buildWhatsappUrl } from "../services/whatsapp.js";
+import { photos } from "./images.js";
+
+const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 export const site = {
   brand: "Mareas | Gastrobar Tropical",
@@ -28,22 +31,19 @@ export const site = {
   rating: { value: 4.4, count: "900+", source: "Google" },
 
   highlights: [
-    { id: "experiencias", emoji: "🎉", title: "Experiencias", desc: "Noches de buena vibra y eventos que se quedan en la memoria." },
-    { id: "cocteles", emoji: "🍹", title: "Cócteles", desc: "Tragos tropicales para bajar el ritmo y quedarte un rato más." },
-    { id: "pizza", emoji: "🍕", title: "Pizza", desc: "Recién salida, para compartir mesa y charla." },
-    { id: "antojos", emoji: "🌮", title: "Antojos", desc: "Eso que antoja a media tarde y se pide para repetir." },
-    { id: "cheers", emoji: "🥂", title: "Cheers", desc: "Brindis, grupo y actitud de escapada tropical." },
+    { id: "experiencias", photo: photos.highlights.experiencias, title: "Experiencias", desc: "Noches de buena vibra y eventos que se quedan en la memoria." },
+    { id: "cocteles", photo: photos.highlights.cocteles, title: "Cócteles", desc: "Tragos tropicales para bajar el ritmo y quedarte un rato más." },
+    { id: "pizza", photo: photos.highlights.pizza, title: "Pizza", desc: "Recién salida, para compartir mesa y charla." },
+    { id: "antojos", photo: photos.highlights.antojos, title: "Antojos", desc: "Eso que antoja a media tarde y se pide para repetir." },
+    { id: "cheers", photo: photos.highlights.cheers, title: "Cheers", desc: "Brindis, grupo y actitud de escapada tropical." },
   ],
 
-  hours: [
-    { day: "Lunes", open: "11:00", close: "23:30" },
-    { day: "Martes", open: "11:00", close: "23:30" },
-    { day: "Miércoles", open: "11:00", close: "23:30" },
-    { day: "Jueves", open: "11:00", close: "23:30" },
-    { day: "Viernes", open: "11:00", close: "00:45" },
-    { day: "Sábado", open: "11:00", close: "00:45" },
-    { day: "Domingo", open: "11:00", close: "23:30" },
-  ],
+  // Derivado de config.hours: una sola fuente de verdad para horarios.
+  hours: DAY_NAMES.map((day, i) => ({
+    day,
+    open: config.hours.open,
+    close: config.hours.extendedDays.includes(i) ? config.hours.closeWeekend : config.hours.closeWeekday,
+  })),
 
   testimonials: [
     { name: "Mariela R.", text: "El ambiente es otro nivel, te sentís de vacaciones sin salir de la ciudad." },
