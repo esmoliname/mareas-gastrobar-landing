@@ -1,7 +1,7 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { AlertCircle, Eye, EyeOff, Loader2, Lock, LogIn, Mail, Palmtree, ShieldCheck } from "lucide-vue-next";
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, LogIn, Mail, Palmtree, ShieldCheck, Timer } from "lucide-vue-next";
 import { useAuthStore } from "../stores/auth.js";
 import { config } from "../config/index.js";
 
@@ -26,6 +26,20 @@ const submitted = ref(false);
 
 const demoAvailable = computed(() => config.admin.configured);
 
+// Aviso cuando la sesión se cerró por inactividad (AdminView redirige con ?idle=1).
+const idleNotice = computed(() => route.query.idle === "1");
+
+// Cuenta regresiva del bloqueo por intentos fallidos.
+const lockSeconds = ref(0);
+let lockTimer = null;
+
+function refreshLock() {
+  const waitMs = auth.lockedUntil - Date.now();
+  lockSeconds.value = waitMs > 0 ? Math.ceil(waitMs / 1000) : 0;
+  clearTimeout(lockTimer);
+  if (lockSeconds.value > 0) lockTimer = setTimeout(refreshLock, 500);
+}
+
 const redirectTo = computed(() => {
   const target = route.query.redirect;
   // Open-redirect protection: solo rutas internas absolutas (empiezan con un solo "/"),
@@ -37,7 +51,10 @@ onMounted(() => {
   document.title = "Iniciar sesión | Mareas Gastrobar";
   const el = document.getElementById("username-field");
   if (el) el.focus();
+  refreshLock();
 });
+
+onBeforeUnmount(() => clearTimeout(lockTimer));
 
 function validate() {
   errors.username = "";
@@ -62,13 +79,19 @@ async function submit() {
     errors.form = "El panel aún no está configurado. Definí la variable VITE_ADMIN_PASS en el entorno de deploy.";
     return;
   }
+  if (lockSeconds.value > 0) {
+    errors.form = `Demasiados intentos fallidos. Esperá ${lockSeconds.value} segundos e intentá de nuevo.`;
+    return;
+  }
   if (!validate()) return;
 
   try {
     const ok = await auth.login(form.username, form.password, form.remember);
     if (ok) router.replace(redirectTo.value);
+    refreshLock();
   } catch (e) {
     errors.form = e.message || "No se pudo iniciar sesión. Intentá de nuevo.";
+    refreshLock();
   }
 }
 
@@ -151,6 +174,16 @@ function fillDemo() {
         <div v-if="errors.form" class="login__error login__error--box" role="alert">
           <AlertCircle :size="15" aria-hidden="true" />
           {{ errors.form }}
+        </div>
+
+        <div v-if="idleNotice && !errors.form" class="login__error login__error--box login__error--info" role="status">
+          <Timer :size="15" aria-hidden="true" />
+          Tu sesión se cerró por inactividad. Ingresá de nuevo para continuar.
+        </div>
+
+        <div v-if="lockSeconds > 0" class="login__error login__error--box" role="alert">
+          <Timer :size="15" aria-hidden="true" />
+          Intentos fallidos. Acceso bloqueado por {{ lockSeconds }}&nbsp;s.
         </div>
 
         <label class="login__remember">
@@ -331,6 +364,12 @@ function fillDemo() {
   border-radius: var(--radius-sm);
   background: rgba(232, 122, 93, 0.12);
   border: 1px solid rgba(232, 122, 93, 0.35);
+}
+
+.login__error--info {
+  background: rgba(46, 158, 91, 0.1);
+  border-color: rgba(46, 158, 91, 0.35);
+  color: var(--green-bright);
 }
 
 .login__remember {

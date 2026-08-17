@@ -1,6 +1,8 @@
 import { reactive } from "vue";
 import { seedMenu, categories } from "../data/menu.js";
 import { config } from "../config/index.js";
+import { sanitizeDigits, sanitizeTags, sanitizeText, sanitizeUrl, validateFields } from "../utils/validation.js";
+import { audit } from "../utils/audit.js";
 import { storageGetJSON, storageSetJSON } from "../utils/storage.js";
 
 // v2: el catálogo ahora mapea un modelo 3D dedicado por platillo (20 familias).
@@ -9,30 +11,6 @@ const STORAGE_KEY = "mareas:catalog:v2";
 
 const MAX_NAME = config.businessRules.maxNameLength;
 const MAX_DESC = config.businessRules.maxDescriptionLength;
-
-function sanitizeText(value, max) {
-  return String(value || "").trim().slice(0, max);
-}
-
-function sanitizeUrl(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  try {
-    const url = new URL(raw, window.location.origin);
-    if (!["http:", "https:"].includes(url.protocol)) return "";
-    return url.href;
-  } catch {
-    return "";
-  }
-}
-
-function sanitizeTags(tags) {
-  if (!Array.isArray(tags)) return [];
-  return tags
-    .map((t) => sanitizeText(t, 24))
-    .filter(Boolean)
-    .slice(0, 4);
-}
 
 function load() {
   const parsed = storageGetJSON(STORAGE_KEY);
@@ -57,41 +35,53 @@ if (typeof window !== "undefined") {
   });
 }
 
+// Un único punto de saneamiento para altas y bajas: el input del admin nunca
+// llega directo al catálogo. Retorna { ok, errors } para la UI del formulario.
+export function sanitizeDish(input) {
+  const rules = {
+    name: "required|maxLength:80",
+    price: "required|numberRange:1,1000000",
+    category: "required",
+    image: "optional|httpUrl",
+    model: "optional|httpUrl",
+    usdz: "optional|httpUrl",
+  };
+  const errors = validateFields(rules, input);
+
+  const category = categories.includes(String(input.category || "")) ? String(input.category) : categories[0];
+
+  return {
+    ok: !Object.keys(errors).length,
+    errors,
+    dish: {
+      name: sanitizeText(input.name, MAX_NAME) || "Sin nombre",
+      description: sanitizeText(input.description, MAX_DESC),
+      price: Math.max(0, Number(input.price) || 0),
+      category,
+      image: sanitizeUrl(input.image),
+      model: sanitizeUrl(input.model),
+      usdz: sanitizeUrl(input.usdz),
+      tags: sanitizeTags(input.tags),
+      popular: Boolean(input.popular),
+      available: input.available !== false,
+    },
+  };
+}
+
 export function addItem(item) {
-  const category = categories.includes(item.category) ? item.category : categories[0];
-  const id = String(item.id || `${category.toLowerCase()}-${Date.now().toString(36)}`);
-  catalog.items.unshift({
-    id,
-    name: sanitizeText(item.name, MAX_NAME) || "Sin nombre",
-    description: sanitizeText(item.description, MAX_DESC),
-    price: Math.max(0, Number(item.price) || 0),
-    category,
-    image: sanitizeUrl(item.image),
-    model: sanitizeUrl(item.model),
-    usdz: sanitizeUrl(item.usdz),
-    tags: sanitizeTags(item.tags),
-    popular: Boolean(item.popular),
-    available: item.available !== false,
-  });
+  const id = String(item.id || `${item.category.toLowerCase()}-${Date.now().toString(36)}`);
+  catalog.items.unshift({ id, ...item });
   persist();
+  audit("catalog.create", item.name);
+  return id;
 }
 
 export function updateItem(id, patch) {
   const item = catalog.items.find((i) => i.id === id);
   if (!item) return;
-  Object.assign(item, {
-    name: patch.name !== undefined ? sanitizeText(patch.name, MAX_NAME) || item.name : item.name,
-    description: patch.description !== undefined ? sanitizeText(patch.description, MAX_DESC) : item.description,
-    price: patch.price !== undefined ? Math.max(0, Number(patch.price) || 0) : item.price,
-    category: patch.category !== undefined && categories.includes(patch.category) ? patch.category : item.category,
-    image: patch.image !== undefined ? sanitizeUrl(patch.image) : item.image,
-    model: patch.model !== undefined ? sanitizeUrl(patch.model) : item.model,
-    usdz: patch.usdz !== undefined ? sanitizeUrl(patch.usdz) : item.usdz,
-    tags: patch.tags !== undefined ? sanitizeTags(patch.tags) : item.tags,
-    popular: patch.popular !== undefined ? Boolean(patch.popular) : item.popular,
-    available: patch.available !== undefined ? Boolean(patch.available) : item.available,
-  });
+  Object.assign(item, patch);
   persist();
+  audit("catalog.update", item.name);
 }
 
 export function toggleAvailability(id) {
@@ -99,6 +89,7 @@ export function toggleAvailability(id) {
   if (!item) return;
   item.available = !item.available;
   persist();
+  audit("catalog.toggle", `${item.name}: ${item.available ? "disponible" : "agotado"}`);
 }
 
 export function togglePopular(id) {
@@ -109,8 +100,10 @@ export function togglePopular(id) {
 }
 
 export function removeItem(id) {
+  const item = catalog.items.find((i) => i.id === id);
   catalog.items = catalog.items.filter((i) => i.id !== id);
   persist();
+  audit("catalog.remove", item?.name || id);
 }
 
 export function resetCatalog() {

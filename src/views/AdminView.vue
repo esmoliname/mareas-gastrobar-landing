@@ -1,12 +1,14 @@
 <script setup>
-import { defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ArrowLeft, LogOut, Palmtree, ShieldCheck, UtensilsCrossed, QrCode, Palette } from "lucide-vue-next";
+import { ArrowLeft, ClipboardList, LogOut, Palmtree, ShieldCheck, UtensilsCrossed, QrCode, Palette } from "lucide-vue-next";
+import { config } from "../config/index.js";
 import AdminCatalog from "../components/admin/AdminCatalog.vue";
 import CustomizePanel from "../components/admin/CustomizePanel.vue";
+import AuditLogModal from "../components/admin/AuditLogModal.vue";
 import { useAuthStore } from "../stores/auth.js";
 
-// Carga diferida del generador QR: jspdf + html2canvas se descargan solo
+// Carga diferida del generador QR: jspdf + qrcode se descargan solo
 // cuando el admin abre esa pestaña.
 const QrGenerator = defineAsyncComponent(() => import("../components/admin/QrGenerator.vue"));
 
@@ -20,9 +22,41 @@ const tabs = [
 ];
 
 const activeTab = ref("catalog");
+const auditOpen = ref(false);
+
+const activeComponent = computed(() => {
+  if (activeTab.value === "qr") return QrGenerator;
+  return activeTab.value === "customize" ? CustomizePanel : AdminCatalog;
+});
+
+// Cierre de sesión por inactividad: cualquier interacción reinicia el
+// temporizador; sin actividad durante idleTimeoutMs se cierra la sesión.
+let idleTimer = null;
+
+function scheduleIdleLogout() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    auth.logout("auto");
+    router.replace({ name: "login", query: { idle: "1" } });
+  }, config.businessRules.idleTimeoutMs);
+}
+
+const onActivity = () => scheduleIdleLogout();
+
+onMounted(() => {
+  scheduleIdleLogout();
+  window.addEventListener("pointerdown", onActivity);
+  window.addEventListener("keydown", onActivity);
+});
+
+onBeforeUnmount(() => {
+  clearTimeout(idleTimer);
+  window.removeEventListener("pointerdown", onActivity);
+  window.removeEventListener("keydown", onActivity);
+});
 
 function logout() {
-  auth.logout();
+  auth.logout("manual");
   router.replace({ name: "login" });
 }
 </script>
@@ -52,6 +86,10 @@ function logout() {
             <LogOut :size="17" />
             <span>Cerrar sesión</span>
           </button>
+          <button class="admin__audit-btn" type="button" aria-label="Ver bitácora de auditoría" title="Bitácora de auditoría" @click="auditOpen = true">
+            <ClipboardList :size="17" />
+            <span>Bitácora</span>
+          </button>
         </div>
       </div>
 
@@ -72,10 +110,12 @@ function logout() {
     </header>
 
     <main class="container admin__body">
-      <AdminCatalog v-if="activeTab === 'catalog'" />
-      <QrGenerator v-else-if="activeTab === 'qr'" />
-      <CustomizePanel v-else />
+      <KeepAlive>
+        <component :is="activeComponent" :key="activeTab" />
+      </KeepAlive>
     </main>
+
+    <AuditLogModal :open="auditOpen" @close="auditOpen = false" />
   </div>
 </template>
 
@@ -181,6 +221,25 @@ function logout() {
 .admin__logout:hover {
   background: rgba(232, 122, 93, 0.14);
   color: #ffb3a0;
+}
+
+.admin__audit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 239, 224, 0.16);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.admin__audit-btn:hover {
+  background: rgba(245, 239, 224, 0.06);
+  color: var(--gold-light);
 }
 
 .admin__tabs {

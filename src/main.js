@@ -7,6 +7,7 @@ import { site } from "./data/site.js";
 import { config } from "./config/index.js";
 import { photos } from "./data/images.js";
 import "./styles/main.css";
+import "./styles/admin.css";
 
 applyTheme();
 

@@ -36,6 +36,7 @@ export const config = {
     maxNameLength: 80,
     maxDescriptionLength: 280,
     authTtlMs: 8 * 60 * 60 * 1000, // sesión admin: 8 horas
+    idleTimeoutMs: 30 * 60 * 1000, // cierre por inactividad: 30 minutos
   },
 
   admin: {

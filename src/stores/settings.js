@@ -1,5 +1,7 @@
 import { reactive, watch } from "vue";
 import { storageGetJSON, storageSetJSON } from "../utils/storage.js";
+import { sanitizeText } from "../utils/validation.js";
+import { audit } from "../utils/audit.js";
 
 const STORAGE_KEY = "mareas:settings:v1";
 
@@ -36,12 +38,20 @@ export const settings = reactive({
 
 export const themeOptions = themes;
 
+const MAX_BANNER = 90;
+
 export function setTheme(name) {
-  if (themes[name]) settings.theme = name;
+  if (!themes[name] || settings.theme === name) return;
+  settings.theme = name;
+  audit("settings.theme", themes[name].label);
 }
 
 export function setBanner(patch) {
-  settings.banner = { ...settings.banner, ...patch };
+  const next = { ...settings.banner, ...patch };
+  next.text = sanitizeText(next.text, MAX_BANNER);
+  if (next.text === settings.banner.text && next.enabled === settings.banner.enabled) return;
+  settings.banner = next;
+  audit("settings.banner", next.enabled ? "activado" : "desactivado");
 }
 
 export function applyTheme() {
