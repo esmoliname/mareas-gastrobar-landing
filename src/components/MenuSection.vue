@@ -12,6 +12,11 @@ const query = ref("");
 const activeCategory = ref("Todos");
 const tableFromUrl = ref("");
 
+// Skeleton inicial: da ritmo de carga a la primera pintura del menú
+// (el catálogo es local, pero la red de imágenes es real).
+const loading = ref(true);
+setTimeout(() => (loading.value = false), 550);
+
 const chips = computed(() => ["Todos", ...menuCategories]);
 
 const filtered = computed(() => {
@@ -27,6 +32,12 @@ const filtered = computed(() => {
     );
   });
 });
+
+const totalAvailable = computed(() => catalog.items.filter((i) => i.available).length);
+
+function clearQuery() {
+  query.value = "";
+}
 
 function openAr(item) {
   arStore.openItem(item, "menu");
@@ -72,7 +83,18 @@ function clearTable() {
           aria-label="Buscar en el menú"
           autocomplete="off"
         />
-        <span v-if="query" class="menu__count">{{ filtered.length }} resultado{{ filtered.length === 1 ? "" : "s" }}</span>
+        <button
+          v-if="query"
+          class="menu__clear"
+          type="button"
+          aria-label="Limpiar búsqueda"
+          @click="clearQuery"
+        >
+          <X :size="15" />
+        </button>
+        <span class="menu__count">
+          {{ query ? `${filtered.length} resultado${filtered.length === 1 ? "" : "s"}` : `${totalAvailable} disponibles` }}
+        </span>
       </div>
 
       <div v-if="tableFromUrl" class="menu__table-chip" role="status">
@@ -83,26 +105,36 @@ function clearTable() {
         </button>
       </div>
 
-      <div class="menu__chips" role="tablist" aria-label="Categorías del menú">
+      <div class="menu__chips" role="group" aria-label="Categorías del menú">
         <button
           v-for="chip in chips"
           :key="chip"
           class="menu__chip"
           :class="{ 'is-active': activeCategory === chip }"
-          role="tab"
-          :aria-selected="activeCategory === chip"
+          :aria-pressed="activeCategory === chip"
           @click="activeCategory = chip"
         >
           {{ chip }}
         </button>
       </div>
 
-      <p v-if="!filtered.length" class="menu__empty">
+      <p v-if="!loading && !filtered.length" class="menu__empty">
         <Box :size="28" aria-hidden="true" />
         Sin resultados para “{{ query }}”. Probá con otra búsqueda o cambiá de categoría.
       </p>
 
-      <div v-else class="menu__grid">
+      <div v-if="loading" class="menu__grid" aria-hidden="true">
+        <div v-for="n in 6" :key="n" class="menu-skeleton">
+          <div class="menu-skeleton__img"></div>
+          <div class="menu-skeleton__body">
+            <div class="menu-skeleton__line menu-skeleton__line--sm"></div>
+            <div class="menu-skeleton__line menu-skeleton__line--md"></div>
+            <div class="menu-skeleton__line"></div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="filtered.length" class="menu__grid">
         <DishCard v-for="item in filtered" :key="item.id" :item="item" @open-ar="openAr" />
       </div>
 
@@ -182,6 +214,64 @@ function clearTable() {
   font-weight: 600;
   color: var(--gold);
   white-space: nowrap;
+}
+
+.menu__clear {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.menu__clear:hover {
+  color: var(--gold-light);
+  background: rgba(245, 239, 224, 0.06);
+}
+
+.menu-skeleton {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid rgba(245, 239, 224, 0.06);
+}
+
+.menu-skeleton__img {
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(100deg, var(--bg-panel-2) 40%, rgba(245, 239, 224, 0.05) 50%, var(--bg-panel-2) 60%);
+  background-size: 220% 100%;
+  animation: menu-skeleton-shimmer 1.4s ease infinite;
+}
+
+.menu-skeleton__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.menu-skeleton__line {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(245, 239, 224, 0.08);
+}
+
+.menu-skeleton__line--sm {
+  width: 35%;
+}
+
+.menu-skeleton__line--md {
+  width: 70%;
+}
+
+@keyframes menu-skeleton-shimmer {
+  to {
+    background-position: -120% 0;
+  }
 }
 
 .menu__chips {

@@ -5,16 +5,6 @@ import SiteHeader from "../components/SiteHeader.vue";
 import HeroSection from "../components/HeroSection.vue";
 import MenuSection from "../components/MenuSection.vue";
 import ArGallerySection from "../components/ArGallerySection.vue";
-import CategoryTicker from "../components/CategoryTicker.vue";
-import HighlightsSection from "../components/HighlightsSection.vue";
-import ExperienceSection from "../components/ExperienceSection.vue";
-import SocialProofSection from "../components/SocialProofSection.vue";
-import SocialFeed from "../components/SocialFeed.vue";
-import LocationSection from "../components/LocationSection.vue";
-import ReservationSection from "../components/ReservationSection.vue";
-import FinalCtaSection from "../components/FinalCtaSection.vue";
-import SiteFooter from "../components/SiteFooter.vue";
-import WhatsappFab from "../components/WhatsappFab.vue";
 import CartDrawer from "../components/CartDrawer.vue";
 import { getStatus } from "../utils/hours.js";
 import { settings } from "../stores/settings.js";
@@ -25,6 +15,17 @@ import { preloadModel } from "../utils/viewer.js";
 
 // El visor 3D/AR se monta una sola vez y se comparte con el menú y la galería.
 const ArModal = defineAsyncComponent(() => import("../components/ArModal.vue"));
+
+// Secciones below-the-fold: se descargan solo cuando el navegador está
+// libre (suspense del chunk), reduciendo el JS inicial de la landing.
+const CategoryTicker = defineAsyncComponent(() => import("../components/CategoryTicker.vue"));
+const HighlightsSection = defineAsyncComponent(() => import("../components/HighlightsSection.vue"));
+const ExperienceSection = defineAsyncComponent(() => import("../components/ExperienceSection.vue"));
+const SocialProofSection = defineAsyncComponent(() => import("../components/SocialProofSection.vue"));
+const SocialFeed = defineAsyncComponent(() => import("../components/SocialFeed.vue"));
+const LocationSection = defineAsyncComponent(() => import("../components/LocationSection.vue"));
+const ReservationSection = defineAsyncComponent(() => import("../components/ReservationSection.vue"));
+const FinalCtaSection = defineAsyncComponent(() => import("../components/FinalCtaSection.vue"));
 
 const status = computed(() => getStatus());
 const showBanner = ref(false);

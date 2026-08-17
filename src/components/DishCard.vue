@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { Flame, Plus } from "lucide-vue-next";
+import { Ban, Flame, Plus } from "lucide-vue-next";
 import { formatColones } from "../utils/format.js";
 import { useCartStore } from "../stores/cart.js";
 import { notifySuccess } from "../utils/toast.js";
@@ -57,9 +57,17 @@ function addToCart() {
       <h3 class="dish__name">{{ item.name }}</h3>
       <p class="dish__desc">{{ item.description }}</p>
       <div class="dish__actions">
-        <button class="btn btn--primary dish__add" type="button" :disabled="!item.available" @click="addToCart">
-          <Plus :size="16" aria-hidden="true" />
-          Agregar
+        <button
+          class="btn btn--primary dish__add"
+          type="button"
+          :disabled="!item.available"
+          :aria-disabled="!item.available"
+          :title="item.available ? `Agregar ${item.name} al pedido` : 'Este platillo está agotado por hoy'"
+          @click="addToCart"
+        >
+          <span v-if="item.available" class="dish__add-icon"><Plus :size="16" aria-hidden="true" /></span>
+          <span v-else class="dish__add-icon"><Ban :size="16" aria-hidden="true" /></span>
+          {{ item.available ? "Agregar" : "Agotado" }}
         </button>
         <button class="btn btn--outline dish__ar" type="button" @click="$emit('open-ar', item)">
           <Box :size="16" aria-hidden="true" />
@@ -200,8 +208,14 @@ function addToCart() {
   padding-inline: 12px;
 }
 
+.dish__add-icon {
+  display: inline-flex;
+}
+
 .dish__add:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
+  background: var(--bg-panel-2);
+  color: var(--muted);
 }
 </style>
