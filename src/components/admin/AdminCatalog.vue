@@ -8,6 +8,8 @@ import {
   Save,
   X,
   Box,
+  ScanLine,
+  Loader2,
 } from "lucide-vue-next";
 import {
   catalog,
@@ -23,8 +25,38 @@ import { modelOptions } from "../../data/models3d.js";
 import { formatColones } from "../../utils/format.js";
 import { config } from "../../config/index.js";
 import { notifyError, notifyInfo, notifySuccess } from "../../utils/toast.js";
+import { loadViewer } from "../../utils/viewer.js";
+
+// Vista previa 3D del modelo seleccionado: el bundle de model-viewer solo se
+// descarga la primera vez que el admin la activa.
+const previewOpen = ref(false);
+const previewReady = ref(false);
+const previewError = ref(false);
+
+async function togglePreview() {
+  previewOpen.value = !previewOpen.value;
+  if (!previewOpen.value || previewReady.value) return;
+  previewError.value = false;
+  try {
+    await loadViewer();
+    previewReady.value = true;
+  } catch {
+    previewError.value = true;
+    notifyError("No se pudo cargar el visor 3D.");
+  }
+}
 
 const TAG_OPTIONS = ["Nuevo", "Popular", "Chef"];
+
+// Modelos agrupados por categoría de menú para elegir el 3D correcto.
+const modelGroups = computed(() => {
+  const groups = new Map();
+  for (const opt of modelOptions) {
+    if (!groups.has(opt.category)) groups.set(opt.category, []);
+    groups.get(opt.category).push(opt);
+  }
+  return [...groups.entries()];
+});
 
 const formOpen = ref(false);
 const editingId = ref(null);
@@ -289,10 +321,12 @@ function onReset() {
             <label class="field field--span2">
               <span>Modelo 3D (AR)</span>
               <select :value="modelOptions.find((o) => o.glb === form.model)?.key" @change="onModelChange($event.target.value)">
-                <option v-for="opt in modelOptions" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+                <optgroup v-for="[cat, opts] in modelGroups" :key="cat" :label="cat">
+                  <option v-for="opt in opts" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+                </optgroup>
                 <option v-if="!modelOptions.some((o) => o.glb === form.model)" value="custom" disabled>Modelo personalizado</option>
               </select>
-              <small class="field__hint">Cada categoría trae su modelo .glb y su versión .usdz para iOS (Apple Quick Look).</small>
+              <small class="field__hint">Cada platillo trae su modelo .glb y su .usdz para iOS (Apple Quick Look). Los modelos "casa" se regeneran con scripts/gen-models.js y scripts/gen-usdz.py.</small>
             </label>
 
             <label class="field field--span2">
@@ -306,6 +340,34 @@ function onReset() {
               <input v-model="form.usdz" type="url" placeholder="https://…/modelo.usdz" />
               <small class="field__hint">Apple Quick Look abre el .usdz en iPhone/iPad. Dejalo vacío si no tenés versión iOS.</small>
             </label>
+
+            <div class="field field--span2">
+              <button class="btn btn--ghost btn--sm" type="button" :aria-expanded="previewOpen" @click="togglePreview">
+                <ScanLine :size="14" aria-hidden="true" />
+                {{ previewOpen ? "Ocultar vista previa 3D" : "Ver vista previa 3D" }}
+              </button>
+              <div v-if="previewOpen" class="preview3d">
+                <model-viewer
+                  v-if="previewReady && form.model"
+                  :src="form.model"
+                  camera-controls
+                  auto-rotate
+                  auto-rotate-delay="0"
+                  shadow-intensity="1.4"
+                  shadow-softness="0.6"
+                  tone-mapping="aces"
+                  environment-image="neutral"
+                  class="preview3d__viewer"
+                ></model-viewer>
+                <p v-else-if="previewError" class="preview3d__msg">
+                  No se pudo cargar el visor 3D en este navegador.
+                </p>
+                <p v-else class="preview3d__msg">
+                  <Loader2 :size="16" class="preview3d__spin" aria-hidden="true" />
+                  Cargando visor 3D…
+                </p>
+              </div>
+            </div>
 
             <div class="field field--span2">
               <span>Etiquetas</span>
@@ -545,6 +607,42 @@ function onReset() {
   background: linear-gradient(135deg, var(--green), var(--green-bright));
   border-color: transparent;
   color: #fff;
+}
+
+.preview3d {
+  margin-top: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(245, 239, 224, 0.1);
+  background: #0b1210;
+  overflow: hidden;
+}
+
+.preview3d__viewer {
+  display: block;
+  width: 100%;
+  height: 260px;
+}
+
+.preview3d__msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 260px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.preview3d__spin {
+  color: var(--gold-light);
+  animation: preview3d-spin 1s linear infinite;
+}
+
+@keyframes preview3d-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .admin-table__price {

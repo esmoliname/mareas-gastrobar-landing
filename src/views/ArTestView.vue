@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { Loader2, RefreshCw, ScanLine } from "lucide-vue-next";
 import { modelCatalog, modelIosSrc } from "../data/models3d.js";
+import { loadViewer } from "../utils/viewer.js";
 
 // Vista de diagnóstico /ar-test: galería de todos los modelos self-hosted
 // para verificar carga de .glb / .usdz, dimensiones métricas y lanzar AR.
@@ -15,8 +16,6 @@ const entries = Object.entries(modelCatalog).map(([key, value]) => ({
   status: "pending",
   progress: 0,
 }));
-
-const loadViewer = () => import("@google/model-viewer");
 
 onMounted(async () => {
   try {
@@ -148,6 +147,7 @@ function scaleLabel(card) {
             <code class="artest__file">{{ card.key }}.glb</code>
           </div>
           <div class="artest__specs">
+            <span>Categoría <strong>{{ card.category }}</strong></span>
             <span>Dimensión real ≈ <strong>{{ dimsLabel(card) }}</strong></span>
             <span>Factor escala <strong>{{ scaleLabel(card) }}</strong></span>
             <span>Orbit <code>{{ card.cameraOrbit }}</code></span>

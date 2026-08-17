@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, ref } from "vue";
 import { Palmtree } from "lucide-vue-next";
 import SiteHeader from "../components/SiteHeader.vue";
 import HeroSection from "../components/HeroSection.vue";
 import MenuSection from "../components/MenuSection.vue";
+import ArGallerySection from "../components/ArGallerySection.vue";
 import CategoryTicker from "../components/CategoryTicker.vue";
 import HighlightsSection from "../components/HighlightsSection.vue";
 import ExperienceSection from "../components/ExperienceSection.vue";
@@ -17,12 +18,38 @@ import WhatsappFab from "../components/WhatsappFab.vue";
 import CartDrawer from "../components/CartDrawer.vue";
 import { getStatus } from "../utils/hours.js";
 import { settings } from "../stores/settings.js";
+import { catalog } from "../stores/catalog.js";
+import { arStore } from "../stores/ar.js";
+import { modelCatalog } from "../data/models3d.js";
+import { preloadModel } from "../utils/viewer.js";
+
+// El visor 3D/AR se monta una sola vez y se comparte con el menú y la galería.
+const ArModal = defineAsyncComponent(() => import("../components/ArModal.vue"));
 
 const status = computed(() => getStatus());
 const showBanner = ref(false);
 
+// Platillo que abre el CTA del hero y se precarga para el primer "Ver en RA".
+const featuredDish = computed(() => catalog.items.find((i) => i.id === "pizza-pacifico"));
+
+function openFeaturedAr() {
+  if (featuredDish.value) arStore.openItem(featuredDish.value, "hero");
+}
+
 onMounted(() => {
   showBanner.value = settings.banner.enabled;
+
+  // Deep link: /?ra=<id-de-platillo|key-de-modelo> abre el visor 3D directo
+  // (p. ej. desde una historia de Instagram o un QR del local).
+  const ra = String(new URLSearchParams(window.location.search).get("ra") || "").trim();
+  if (ra) {
+    const dish =
+      catalog.items.find((i) => i.id === ra) ||
+      catalog.items.find((i) => i.model === modelCatalog[ra]?.glb);
+    if (dish && dish.available) arStore.openItem(dish, "deep_link");
+  }
+
+  if (featuredDish.value?.model) preloadModel(featuredDish.value.model);
 });
 </script>
 
@@ -33,8 +60,9 @@ onMounted(() => {
     <span>{{ settings.banner.text }}</span>
   </div>
   <main>
-    <HeroSection :status="status" />
+    <HeroSection :status="status" :featured-dish="featuredDish" @open-ar="openFeaturedAr" />
     <MenuSection />
+    <ArGallerySection />
     <CategoryTicker />
     <HighlightsSection />
     <ExperienceSection />
@@ -47,6 +75,7 @@ onMounted(() => {
   <SiteFooter />
   <WhatsappFab />
   <CartDrawer />
+  <ArModal />
 </template>
 
 <style scoped>

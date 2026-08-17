@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import {
   Box,
   Flame,
+  LandPlot,
   Loader2,
   Maximize2,
   Minus,
@@ -10,24 +11,20 @@ import {
   RefreshCw,
   Rotate3d,
   ScanLine,
+  ShoppingCart,
   Smartphone,
+  Table2,
   X,
 } from "lucide-vue-next";
 import { formatColones } from "../utils/format.js";
-import { resolveModel } from "../data/models3d.js";
-import { notifyError } from "../utils/toast.js";
+import { modelCatalog, modelOptions, siblingModels } from "../data/models3d.js";
+import { arStore } from "../stores/ar.js";
+import { useCartStore } from "../stores/cart.js";
+import { notifyError, notifySuccess } from "../utils/toast.js";
+import { loadViewer } from "../utils/viewer.js";
+import { track, trackDebounced } from "../utils/analytics.js";
 
-// Import dinámico: el bundle de @google/model-viewer (~1 MB) solo se descarga
-// cuando el usuario abre el modal 3D/AR por primera vez.
-const loadViewer = () => import("@google/model-viewer");
-
-const props = defineProps({
-  item: { type: Object, required: false, default: null },
-});
-
-const emit = defineEmits(["close"]);
-
-const open = computed(() => Boolean(props.item));
+const cart = useCartStore();
 const viewerRef = ref(null);
 const stageRef = ref(null);
 const closeBtnRef = ref(null);
@@ -41,11 +38,27 @@ const autoRotate = ref(true);
 const warmLight = ref(false);
 const zoomedIn = ref(false);
 const viewerReady = ref(false);
+const placement = ref("floor");
 
 const LOAD_TIMEOUT_MS = 8000;
 let loadTimer = null;
+let lastFocused = null;
 
-const resolved = computed(() => (props.item ? resolveModel(props.item.model) : null));
+const item = computed(() => arStore.item.value);
+const open = computed(() => arStore.open.value);
+const resolved = computed(() => arStore.resolved.value);
+const iosSrc = computed(() => arStore.iosSrc.value);
+
+// Modelos sugeridos: primero los de la misma categoría del platillo, luego el resto.
+const siblings = computed(() => {
+  const list = siblingModels(item.value);
+  return list.map((opt) => ({
+    ...opt,
+    active: resolved.value?.glb === opt.glb,
+  }));
+});
+
+const viewerSrc = computed(() => resolved.value?.glb || item.value?.model || "");
 
 const isIOS = computed(() => {
   const ua = navigator.userAgent;
@@ -56,6 +69,8 @@ const isAndroid = computed(() => /Android/i.test(navigator.userAgent));
 
 const iosQuickLookReady = computed(() => isIOS.value && Boolean(iosSrc.value));
 
+const hasIosModel = computed(() => Boolean(iosSrc.value));
+
 // Escala 1:1 con ar-scale="fixed": normaliza las unidades de autoría del GLB
 // (definidas por modelo en models3d.js) al tamaño físico real en metros.
 const modelScale = computed(() => {
@@ -63,17 +78,7 @@ const modelScale = computed(() => {
   return `${s} ${s} ${s}`;
 });
 
-// Ángulo de cámara inicial por modelo (definido en models3d.js) para resaltar
-// el volumen de cada platillo; se usa también al restablecer la cámara.
 const cameraOrbit = computed(() => resolved.value?.cameraOrbit || "0deg 75deg 105%");
-
-// Quick Look respeta el tamaño real: #allowsContentScaling=0 deshabilita el
-// gesto de reescalado con pellizco en iOS (requerido con ar-scale="fixed").
-const iosSrc = computed(() => {
-  const base = props.item?.usdz || resolved.value?.usdz || "";
-  if (!base) return undefined;
-  return base.includes("#allowsContentScaling=") ? base : `${base}#allowsContentScaling=0`;
-});
 
 const arModes = "webxr scene-viewer quick-look";
 
@@ -84,6 +89,10 @@ const platformLabel = computed(() => {
 });
 
 const stageExposure = computed(() => (warmLight.value ? 1.45 : 1.1));
+
+const placementLabel = computed(() =>
+  placement.value === "table" ? "Anclado a mesa / superficie" : "Anclado al piso"
+);
 
 function webglSupported() {
   try {
@@ -97,8 +106,9 @@ function webglSupported() {
   }
 }
 
-// canActivateAR es un getter booleano síncrono en @google/model-viewer,
-// no una función ni una promesa.
+// canActivateAR es un getter booleano síncrono en @google/model-viewer.
+// Debe consultarse con el visor ya montado y el modelo cargado: por eso se
+// re-evalúa en onLoad y no solo al abrir el modal (evita falsos negativos).
 function canUseAr() {
   const viewer = viewerRef.value;
   if (!viewer) return false;
@@ -109,8 +119,41 @@ function canUseAr() {
   }
 }
 
+function checkAr() {
+  const supported = canUseAr();
+  arSupported.value = supported;
+  arChecked.value = true;
+  if (supported) track("ar_available", { model: resolved.value?.glb || "" });
+}
+
+// Trampa de foco (P6): al abrir se guarda el elemento activo y Tab/Shift+Tab
+// quedan confinados al panel del modal; al cerrar se restaura el foco.
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function focusableInPanel() {
+  const panel = document.querySelector(".ar-modal__panel");
+  if (!panel) return [];
+  return Array.from(panel.querySelectorAll(FOCUSABLE)).filter((el) => el.offsetParent !== null);
+}
+
 function onKeydown(e) {
-  if (e.key === "Escape" && open.value) emit("close");
+  if (e.key === "Escape" && open.value) {
+    arStore.close();
+    return;
+  }
+  if (e.key === "Tab" && open.value) {
+    const els = focusableInPanel();
+    if (!els.length) return;
+    const first = els[0];
+    const last = els[els.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 }
 
 onMounted(async () => {
@@ -135,6 +178,17 @@ onBeforeUnmount(() => {
 
 watch(open, async (isOpen) => {
   document.body.style.overflow = isOpen ? "hidden" : "";
+  if (isOpen) {
+    lastFocused = document.activeElement;
+    track("ar_open", {
+      source: arStore.source.value || "",
+      model: resolved.value?.glb || "",
+      dish: item.value?.id || "",
+    });
+  } else {
+    lastFocused?.focus?.();
+    lastFocused = null;
+  }
   if (!isOpen) return;
   loading.value = true;
   loadProgress.value = 0;
@@ -145,11 +199,21 @@ watch(open, async (isOpen) => {
   autoRotate.value = true;
   warmLight.value = false;
   zoomedIn.value = false;
+  placement.value = "floor";
   startLoadWatchdog();
   await nextTick();
   closeBtnRef.value?.focus();
-  arSupported.value = canUseAr();
-  arChecked.value = true;
+  // El visor puede no estar montado aún: la confirmación final llega en onLoad.
+  if (viewerRef.value) checkAr();
+});
+
+watch(viewerSrc, (src) => {
+  if (!src || !open.value) return;
+  loading.value = true;
+  loadProgress.value = 0;
+  modelError.value = false;
+  arError.value = "";
+  startLoadWatchdog();
 });
 
 function onProgress(e) {
@@ -161,6 +225,7 @@ function onLoad() {
   loadProgress.value = 1;
   modelError.value = false;
   if (loadTimer) clearTimeout(loadTimer);
+  checkAr();
 }
 
 function onError() {
@@ -180,7 +245,7 @@ function retry() {
   const viewer = viewerRef.value;
   if (!viewer) return;
   if (typeof viewer.dismissPoster === "function") viewer.dismissPoster();
-  const src = resolved.value?.glb || "";
+  const src = viewerSrc.value;
   if (!src) return;
   // model-viewer no expone un método load(): se fuerza la recarga vía src.
   viewer.src = "";
@@ -203,11 +268,13 @@ function startLoadWatchdog() {
 async function launchAr() {
   const viewer = viewerRef.value;
   if (!viewer) return;
-  if (canUseAr()) {
+  if (!arSupported.value && canUseAr()) checkAr();
+  if (arSupported.value && canUseAr()) {
+    track("ar_launch", { model: resolved.value?.glb || "", mode: "webxr" });
     viewer.activateAR();
     return;
   }
-  if (isIOS.value && !iosSrc.value) {
+  if (isIOS.value && !hasIosModel.value) {
     arError.value = "Este platillo aún no tiene archivo USDZ para iOS. Podés explorarlo en 3D acá mismo.";
   } else {
     arError.value = "Tu dispositivo no soporta Realidad Aumentada. Podés explorar el modelo en 3D acá mismo.";
@@ -258,24 +325,41 @@ function toggleFullscreen() {
     /* pantalla completa no disponible */
   }
 }
+
+function switchModel(key) {
+  if (!modelCatalog[key]) return;
+  arStore.switchModel(key);
+  trackDebounced("ar_switch_model", { model: key });
+}
+
+function addToCart() {
+  const dish = item.value;
+  if (!dish) return;
+  cart.addItem(dish);
+  track("add_to_cart", { item_id: dish.id, item_name: dish.name, value: dish.price });
+  notifySuccess(`${dish.name} se agregó a tu pedido.`);
+}
+
+function close() {
+  arStore.close();
+}
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="ar">
-      <div v-if="open" class="ar-modal" role="dialog" aria-modal="true" aria-label="Vista 3D y Realidad Aumentada" @click.self="emit('close')">
+      <div v-if="open" class="ar-modal" role="dialog" aria-modal="true" aria-label="Vista 3D y Realidad Aumentada" @click.self="close">
         <div class="ar-modal__panel">
-          <button ref="closeBtnRef" class="ar-modal__close" type="button" aria-label="Cerrar" @click="emit('close')">
+          <button ref="closeBtnRef" class="ar-modal__close" type="button" aria-label="Cerrar" @click="close">
             <X :size="22" />
           </button>
 
           <div ref="stageRef" class="ar-modal__stage" :class="{ 'is-warm': warmLight }">
             <img
-              v-if="item.image && (loading || modelError)"
+              v-if="item.image && modelError"
               :src="item.image"
               :alt="`Foto de ${item.name}`"
               class="ar-modal__photo"
-              :class="{ 'is-loading': loading }"
               aria-hidden="true"
             />
 
@@ -290,13 +374,16 @@ function toggleFullscreen() {
             <model-viewer
               v-if="item && viewerReady"
               ref="viewerRef"
-              :src="resolved?.glb || item.model"
+              :key="viewerSrc"
+              :src="viewerSrc"
               :ios-src="iosSrc"
+              :poster="item.image"
+              reveal="auto"
               :alt="`Modelo 3D de ${item.name}`"
               ar
               :ar-modes="arModes"
               ar-scale="fixed"
-              ar-placement="floor"
+              :ar-placement="placement"
               :scale="modelScale"
               :camera-orbit="cameraOrbit"
               camera-controls
@@ -364,11 +451,60 @@ function toggleFullscreen() {
             <h3 class="ar-modal__name">{{ item.name }}</h3>
             <p class="ar-modal__desc">{{ item.description }}</p>
 
+            <div v-if="siblings.length > 1" class="ar-modal__switcher" role="group" aria-label="Ver otro platillo en 3D">
+              <span class="ar-modal__switcher-label">Ver también</span>
+              <div class="ar-modal__switcher-row">
+                <button
+                  v-for="opt in siblings"
+                  :key="opt.key"
+                  type="button"
+                  class="ar-modal__chip"
+                  :class="{ 'is-active': opt.active }"
+                  :aria-pressed="opt.active"
+                  @click="switchModel(opt.key)"
+                >
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
             <div class="ar-modal__actions">
-              <button class="btn btn--primary ar-modal__ar-btn" type="button" :disabled="!arChecked" @click="launchAr">
-                <ScanLine :size="18" aria-hidden="true" />
-                Proyectar en RA
-              </button>
+              <div class="ar-modal__btn-row">
+                <button class="btn btn--primary ar-modal__ar-btn" type="button" :disabled="!arChecked" @click="launchAr">
+                  <ScanLine :size="18" aria-hidden="true" />
+                  Proyectar en RA
+                </button>
+                <button class="btn btn--outline ar-modal__cart-btn" type="button" @click="addToCart">
+                  <ShoppingCart :size="18" aria-hidden="true" />
+                  Agregar
+                </button>
+              </div>
+
+              <div class="ar-modal__placement" role="group" aria-label="Anclaje en realidad aumentada">
+                <button
+                  type="button"
+                  class="ar-modal__placement-btn"
+                  :class="{ 'is-active': placement === 'floor' }"
+                  :aria-pressed="placement === 'floor'"
+                  title="Anclar al piso"
+                  @click="placement = 'floor'"
+                >
+                  <LandPlot :size="14" aria-hidden="true" />
+                  Piso
+                </button>
+                <button
+                  type="button"
+                  class="ar-modal__placement-btn"
+                  :class="{ 'is-active': placement === 'table' }"
+                  :aria-pressed="placement === 'table'"
+                  title="Anclar a una mesa o superficie"
+                  @click="placement = 'table'"
+                >
+                  <Table2 :size="14" aria-hidden="true" />
+                  Mesa
+                </button>
+                <span class="ar-modal__placement-hint">{{ placementLabel }}</span>
+              </div>
 
               <p v-if="iosQuickLookReady" class="ar-modal__hint">
                 <Maximize2 :size="13" aria-hidden="true" />
@@ -470,11 +606,6 @@ function toggleFullscreen() {
   height: 100%;
   object-fit: cover;
   opacity: 0.85;
-}
-
-.ar-modal__photo.is-loading {
-  opacity: 0.35;
-  filter: blur(2px);
 }
 
 .ar-modal__loader {
@@ -642,17 +773,112 @@ function toggleFullscreen() {
   font-size: 0.9rem;
 }
 
+.ar-modal__switcher {
+  margin-top: 16px;
+}
+
+.ar-modal__switcher-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ar-modal__switcher-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.ar-modal__switcher-row::-webkit-scrollbar {
+  display: none;
+}
+
+.ar-modal__chip {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 239, 224, 0.16);
+  background: var(--bg-panel-2);
+  color: var(--sand);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.ar-modal__chip:hover {
+  border-color: var(--green-bright);
+}
+
+.ar-modal__chip.is-active {
+  background: linear-gradient(135deg, var(--green), var(--green-bright));
+  border-color: transparent;
+  color: #fff;
+}
+
 .ar-modal__actions {
   margin-top: 18px;
 }
 
+.ar-modal__btn-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
 .ar-modal__ar-btn {
-  width: 100%;
+  min-height: 46px;
 }
 
 .ar-modal__ar-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.ar-modal__cart-btn {
+  min-height: 46px;
+}
+
+.ar-modal__placement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ar-modal__placement-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 239, 224, 0.16);
+  background: var(--bg-panel-2);
+  color: var(--sand);
+  font-size: 0.76rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.ar-modal__placement-btn:hover {
+  border-color: var(--gold);
+}
+
+.ar-modal__placement-btn.is-active {
+  border-color: var(--gold);
+  background: rgba(201, 162, 39, 0.16);
+  color: var(--gold-light);
+}
+
+.ar-modal__placement-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
 }
 
 .ar-modal__hint {

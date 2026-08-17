@@ -1,12 +1,11 @@
 <script setup>
-import { computed, defineAsyncComponent, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { Search, ScanLine, Box, X, UtensilsCrossed } from "lucide-vue-next";
 import { catalog, menuCategories } from "../stores/catalog.js";
+import { arStore } from "../stores/ar.js";
 import { useCartStore } from "../stores/cart.js";
 import { config } from "../config/index.js";
 import DishCard from "./DishCard.vue";
-
-const ArModal = defineAsyncComponent(() => import("./ArModal.vue"));
 
 const cart = useCartStore();
 const query = ref("");
@@ -29,7 +28,9 @@ const filtered = computed(() => {
   });
 });
 
-const arItem = ref(null);
+function openAr(item) {
+  arStore.openItem(item, "menu");
+}
 
 onMounted(() => {
   const params = new URLSearchParams(window.location.search);
@@ -47,14 +48,6 @@ onMounted(() => {
 function clearTable() {
   tableFromUrl.value = "";
   cart.tableNumber = "";
-}
-
-function openAr(item) {
-  arItem.value = item;
-}
-
-function closeAr() {
-  arItem.value = null;
 }
 </script>
 
@@ -118,8 +111,6 @@ function closeAr() {
         Precios en colones. ¿Dudas? Reservá por WhatsApp y te confirmamos disponibilidad.
       </p>
     </div>
-
-    <ArModal :item="arItem" @close="closeAr" />
   </section>
 </template>
 

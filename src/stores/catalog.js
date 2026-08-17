@@ -3,7 +3,9 @@ import { seedMenu, categories } from "../data/menu.js";
 import { config } from "../config/index.js";
 import { storageGetJSON, storageSetJSON } from "../utils/storage.js";
 
-const STORAGE_KEY = "mareas:catalog:v1";
+// v2: el catálogo ahora mapea un modelo 3D dedicado por platillo (20 familias).
+// El bump invalida catálogos persistidos con el mapeo genérico anterior.
+const STORAGE_KEY = "mareas:catalog:v2";
 
 const MAX_NAME = config.businessRules.maxNameLength;
 const MAX_DESC = config.businessRules.maxDescriptionLength;

@@ -18,7 +18,11 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.4.2",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/devtools-api": "^8.2.1",
+    "sharp": "^0.35.3",
+    "three": "^0.185.1",
     "vite": "^6.0.0"
   }
 }

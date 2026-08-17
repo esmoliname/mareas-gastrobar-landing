@@ -11,9 +11,9 @@ const U = (id, w = 1000) =>
 
 export const photos = {
   hero: "/photos/hero.jpg",
-  // og:image requiere URL absoluta estable; se mantiene en Unsplash hasta
-  // que restaurantemareascr.com esté en línea con fotos del local.
-  og: U("photo-1514933651103-005eec06c04b", 1200),
+  // og:image usa la foto real del local con URL absoluta (requisito de
+  // Open Graph); vive en el repo para no depender de enlaces que expiran.
+  og: "https://restaurantemareascr.com/photos/hero.jpg",
 
   highlights: {
     experiencias: U("photo-1514525253161-7a46d19cd819"),

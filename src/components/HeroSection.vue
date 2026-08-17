@@ -2,11 +2,14 @@
 import { site, whatsappUrl } from "../data/site.js";
 import WhatsappIcon from "./WhatsappIcon.vue";
 import StarRating from "./StarRating.vue";
-import { Clock, MapPin, Martini } from "lucide-vue-next";
+import { Clock, MapPin, Martini, ScanLine } from "lucide-vue-next";
 
 defineProps({
   status: { type: Object, required: true },
+  featuredDish: { type: Object, default: null },
 });
+
+defineEmits(["open-ar"]);
 </script>
 
 <template>
@@ -61,6 +64,15 @@ defineProps({
           Reservá tu mesa
         </a>
         <a class="btn btn--outline" href="#menu">Ver menú</a>
+        <button
+          v-if="featuredDish"
+          class="btn btn--gold hero__ar-cta"
+          type="button"
+          @click="$emit('open-ar')"
+        >
+          <ScanLine :size="19" aria-hidden="true" />
+          Probalo en 3D
+        </button>
       </div>
 
       <dl class="hero__meta">
