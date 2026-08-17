@@ -22,7 +22,7 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/devtools-api": "^8.2.1",
     "sharp": "^0.35.3",
-    "three": "^0.185.1",
+    "three": "^0.183.2",
     "vite": "^6.0.0"
   }
 }
