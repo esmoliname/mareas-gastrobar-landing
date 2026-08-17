@@ -18,6 +18,8 @@ defineEmits(["open-ar"]);
       <img
         class="hero__img"
         src="/photos/hero.jpg"
+        srcset="/photos/hero-800.jpg 800w, /photos/hero.jpg 1600w"
+        sizes="100vw"
         alt=""
         fetchpriority="high"
         decoding="async"
